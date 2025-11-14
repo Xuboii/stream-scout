@@ -1,7 +1,7 @@
 // shared.js
 
 // Change this to your actual proxy URL
-const PROXY_URL = "https://your-proxy.example.com";
+const PROXY_URL = "http://localhost:8080";
 
 // Wrapper for GET requests to your proxy
 export async function pget(path, params = {}) {
