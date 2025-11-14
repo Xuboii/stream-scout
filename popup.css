@@ -1,0 +1,114 @@
+body {
+  width: 380px;
+  font: 14px system-ui, sans-serif;
+  margin: 0;
+  background: #ffffff;
+  color: #111;
+}
+
+header {
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+  background: #fafafa;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+#q {
+  flex: 1;
+  padding: 6px;
+}
+
+#type, #genre, #sort {
+  padding: 6px;
+}
+
+#genre {
+  width: 100 percent;
+}
+
+#onlyAvail {
+  margin-right: 4px;
+}
+
+main {
+  padding: 10px;
+  display: grid;
+  gap: 10px;
+}
+
+.card {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  gap: 10px;
+  border: 1px solid #eee;
+  border-radius: 10px;
+  padding: 10px;
+  background: #ffffff;
+}
+
+.poster {
+  width: 90px;
+  height: 135px;
+  object-fit: cover;
+  border-radius: 6px;
+  background: #f2f2f2;
+}
+
+.meta .title {
+  margin: 0;
+  font-size: 15px;
+}
+
+.meta .sub {
+  color: #555;
+  margin: 4px 0;
+}
+
+.meta .imdb {
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.providers {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.provider-tag {
+  font-size: 12px;
+  padding: 2px 6px;
+  background: #eef;
+  border: 1px solid #ccd;
+  border-radius: 10px;
+}
+
+.actions {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+}
+
+button {
+  cursor: pointer;
+  padding: 4px 8px;
+  background: #f6f6f6;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+footer {
+  padding: 10px;
+  border-top: 1px solid #eee;
+  display: flex;
+  justify-content: space-around;
+}
+
+footer button.active {
+  font-weight: 700;
+}

@@ -1,0 +1,54 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Stream Scout</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header>
+    <h1>Stream Scout</h1>
+    <div class="row">
+      <input id="q" type="search" placeholder="Search movies or TV shows" />
+      <select id="type">
+        <option value="movie">Movies</option>
+        <option value="tv">TV</option>
+      </select>
+    </div>
+    <div class="row">
+      <select id="genre" multiple size="5" title="Filter by genre"></select>
+    </div>
+    <div class="row">
+      <label><input type="checkbox" id="onlyAvail" /> Show only with providers</label>
+    </div>
+  </header>
+
+  <main id="results"></main>
+
+  <footer>
+    <nav>
+      <button id="tabSearch" class="active">Search</button>
+      <button id="tabWatchlist">Watchlist</button>
+      <button id="tabWatched">Watched</button>
+    </nav>
+  </footer>
+
+  <template id="card-tpl">
+    <article class="card">
+      <img class="poster" alt="Poster" />
+      <div class="meta">
+        <h2 class="title"></h2>
+        <div class="sub"></div>
+        <div class="imdb"></div>
+        <div class="providers"></div>
+        <div class="actions">
+          <button class="btn-watchlist">Add to Watchlist</button>
+          <button class="btn-watched">Mark Watched</button>
+        </div>
+      </div>
+    </article>
+  </template>
+
+  <script src="popup.js" type="module"></script>
+</body>
+</html>

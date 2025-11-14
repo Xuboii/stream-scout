@@ -1,0 +1,24 @@
+.ss-panel {
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  z-index: 2147483647;
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 10px;
+  padding: 10px;
+  max-width: 360px;
+  background: #ffffff;
+  border: 1px solid #ececec;
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.12);
+  font: 13px system-ui, sans-serif;
+  color: #111;
+}
+.ss-poster { width: 64px; height: 96px; border-radius: 6px; object-fit: cover; background: #f4f4f4; }
+.ss-title { font-weight: 700; }
+.ss-sub { color: #666; margin: 2px 0 4px; }
+.ss-imdb { font-weight: 700; margin-bottom: 6px; }
+.ss-tag { display: inline-block; font-size: 12px; padding: 2px 6px; margin: 0 4px 4px 0; border-radius: 999px; border: 1px solid #dcdcff; background: #f3f3ff; }
+.ss-actions { margin-top: 6px; display: flex; gap: 6px; }
+.ss-actions button { padding: 4px 8px; border: 1px solid #ddd; border-radius: 6px; background: #fafafa; cursor: pointer; }

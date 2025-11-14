@@ -1,0 +1,68 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Stream Scout Side Panel</title>
+  <link rel="stylesheet" href="sidepanel.css" />
+</head>
+<body>
+  <header>
+    <h1>Stream Scout</h1>
+
+    <div class="row">
+      <input id="q" type="search" placeholder="Search movies or TV shows" />
+      <select id="type">
+        <option value="movie">Movies</option>
+        <option value="tv">TV</option>
+      </select>
+    </div>
+
+    <div class="row">
+      <label>Genres</label>
+      <select id="genre" multiple size="6"></select>
+    </div>
+
+    <div class="row">
+      <label>Sort by</label>
+      <select id="sort">
+        <option value="popularity">Popularity</option>
+        <option value="rating">IMDb rating</option>
+        <option value="year">Release year</option>
+        <option value="title">Title A to Z</option>
+      </select>
+    </div>
+
+    <div class="row">
+      <label><input type="checkbox" id="onlyAvail" /> Only with providers</label>
+    </div>
+
+    <div id="providerFilters" class="providers-row">
+      <!-- Provider chips will be populated here -->
+    </div>
+  </header>
+
+  <main id="results"></main>
+
+  <footer>
+    <button id="loadMore">Load more</button>
+  </footer>
+
+  <template id="card-tpl">
+    <article class="card">
+      <img class="poster" alt="Poster" />
+      <div class="meta">
+        <h2 class="title"></h2>
+        <div class="sub"></div>
+        <div class="imdb"></div>
+        <div class="providers"></div>
+        <div class="actions">
+          <button class="btn-watchlist">Add to Watchlist</button>
+          <button class="btn-watched">Mark Watched</button>
+        </div>
+      </div>
+    </article>
+  </template>
+
+  <script src="sidepanel.js" type="module"></script>
+</body>
+</html>
