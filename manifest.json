@@ -40,18 +40,14 @@
   "content_scripts": [
     {
       "matches": [
-        "https://*.imdb.com/*",
-        "https://*.tmdb.org/*",
-        "https://*.netflix.com/*",
-        "https://*.hulu.com/*",
-        "https://*.primevideo.com/*",
-        "https://*.disneyplus.com/*"
+        "https://*.imdb.com/*"
       ],
-      "js": ["content/detect.js", "content/injector.js"],
+      "js": ["content/injector.js"],
       "css": ["content/styles.css"],
       "run_at": "document_idle"
     }
   ],
+
 
   "icons": {
     "16": "assets/icons/16.png",

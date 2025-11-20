@@ -1,36 +1,83 @@
-// Try JSON-LD first, then fall back to common selectors
-export function detectTitleAndYear() {
-  // JSON-LD on many media pages
-  for (const el of document.querySelectorAll('script[type="application/ld+json"]')) {
-    try {
-      const data = JSON.parse(el.textContent.trim());
-      const node = Array.isArray(data) ? data.find(x => x["@type"] === "Movie" || x["@type"] === "TVSeries") : data;
-      if (node && (node.name || node.title)) {
-        const title = node.name || node.title;
-        const year = (node.datePublished || node.startDate || "").slice(0, 4);
-        const type = node["@type"] === "TVSeries" ? "tv" : "movie";
-        return { title, year, type };
+// detect.js
+console.log("Stream Scout detect.js loaded on", location.href);
+
+// --- Helpers ---
+function waitForDOM(selector, timeout = 5000) {
+  return new Promise(resolve => {
+    const found = document.querySelector(selector);
+    if (found) return resolve(found);
+
+    const observer = new MutationObserver(() => {
+      const node = document.querySelector(selector);
+      if (node) {
+        observer.disconnect();
+        resolve(node);
       }
-    } catch {}
-  }
+    });
 
-  // IMDb fallback
-  const imdbTitle = document.querySelector("h1[data-testid='hero-title-block__title']");
-  if (imdbTitle) {
-    const sub = document.querySelector("ul[data-testid='hero-title-block__metadata'] li");
-    const year = sub ? sub.textContent.match(/\d{4}/)?.[0] : "";
-    // Heuristic: if page has episodes nav then call it TV
-    const type = document.querySelector("[data-testid='episodes-header']") ? "tv" : "movie";
-    return { title: imdbTitle.textContent.trim(), year, type };
-  }
+    observer.observe(document, { childList: true, subtree: true });
 
-  // TMDB fallback
-  const tmdbTitle = document.querySelector("h2 a[href*='/movie/'], h2 a[href*='/tv/']");
-  if (tmdbTitle) {
-    const type = tmdbTitle.href.includes("/tv/") ? "tv" : "movie";
-    return { title: tmdbTitle.textContent.trim(), year: "", type };
-  }
-
-  // Netflix and others would need per-site tweaks. Return null if unknown.
-  return null;
+    setTimeout(() => {
+      observer.disconnect();
+      resolve(null);
+    }, timeout);
+  });
 }
+
+// Extract IMDb ID from URL
+function extractIMDbID() {
+  const match = location.pathname.match(/\/title\/(tt\d{7,8})/);
+  return match ? match[1] : null;
+}
+
+// Primary title detection (clean)
+function detectTitle() {
+  // IMDb renders the title in a <h1 data-testid="hero-title-block__title">
+  const el = document.querySelector('[data-testid="hero-title-block__title"]');
+  if (el) return el.textContent.trim();
+
+  // Fallback to <title>
+  const raw = document.title || "";
+  const m = raw.match(/^(.*?)\s*\(/);
+  return m ? m[1].trim() : null;
+}
+
+// Year detection
+function detectYear() {
+  // IMDb renders the year in the hero metadata list
+  const yearNode = document.querySelector('[data-testid="hero-title-block__metadata"] li');
+  if (yearNode) {
+    const y = yearNode.textContent.trim().slice(0, 4);
+    if (/^\d{4}$/.test(y)) return y;
+  }
+
+  // Fallback to document.title
+  const m = document.title.match(/\((\d{4})\)/);
+  return m ? m[1] : null;
+}
+
+// Send message to injector
+async function sendDetectedInfo() {
+  const imdbId = extractIMDbID();
+  if (!imdbId) {
+    console.warn("Stream Scout: Could not detect IMDb ID. Not an IMDb title page.");
+    return;
+  }
+
+  // Wait for title block to render (React loads slow)
+  await waitForDOM('[data-testid="hero-title-block__title"]');
+
+  const title = detectTitle();
+  const year = detectYear();
+
+  console.log("Stream Scout detected:", { imdbId, title, year });
+
+  chrome.runtime.sendMessage({
+    action: "STREAM_SCOUT_DETECTED",
+    imdbId,
+    title,
+    year
+  });
+}
+
+sendDetectedInfo();
