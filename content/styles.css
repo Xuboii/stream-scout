@@ -1,352 +1,436 @@
+/* ========= Base layout ========= */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
 body {
   margin: 0;
+  padding: 0;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
-  color: #f5f7ff;
-  background: #050b18;
+  background: transparent;
 }
 
-.popup-root {
-  width: 360px;
-  min-height: 420px;
-  background: radial-gradient(circle at top, #14203b 0, #050b18 55%);
+body {
+  width: 760px;
+  height: 600px;
+}
+
+/* Use CSS grid so preview sits on the right */
+.popup {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  grid-template-rows: auto auto 1fr;
+  grid-template-areas:
+    "header header"
+    "controls controls"
+    "content preview";
+  gap: 8px;
+  padding: 10px;
+  background: radial-gradient(circle at top, #101b37 0, #050915 55%, #020309 100%);
+  color: #f7f9ff;
+}
+
+/* ========= Header / Tabs ========= */
+
+.header {
+  grid-area: header;
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 4px 8px;
 }
 
-/* Header and tabs */
-
-.top-bar {
-  padding: 10px 12px 0 12px;
-}
-
-.logo {
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  margin-bottom: 6px;
+.title {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
 }
 
 .tabs {
   display: flex;
-  gap: 4px;
-  margin-bottom: 6px;
+  gap: 6px;
 }
 
 .tab {
-  flex: 1;
   border: none;
-  padding: 4px 0;
+  padding: 4px 10px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 11px;
   cursor: pointer;
   background: transparent;
-  color: #a7b4d8;
+  color: #c4c9ff;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
 .tab.active {
-  background: #1b4bff;
-  color: #f5f7ff;
+  background: linear-gradient(135deg, #2563eb, #22c1c3);
+  color: #ffffff;
 }
 
-/* Controls */
+/* ========= Controls ========= */
 
 .controls {
-  padding: 6px 12px 4px 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  grid-area: controls;
+  background: rgba(12, 18, 38, 0.96);
+  border-radius: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(77, 102, 189, 0.4);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
 }
 
 .field-row {
   display: flex;
-  gap: 6px;
+  gap: 10px;
+  align-items: flex-end;
   margin-bottom: 8px;
 }
 
-.input {
-  flex: 1;
-  border-radius: 999px;
-  border: none;
-  padding: 5px 9px;
-  font-size: 12px;
-  background: #050b18;
-  color: #f5f7ff;
-  outline: 1px solid rgba(255, 255, 255, 0.15);
-}
-
-.input::placeholder {
-  color: #626c8f;
-}
-
-.primary-btn {
-  border-radius: 999px;
-  border: none;
-  padding: 5px 12px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  background: linear-gradient(135deg, #1b4bff, #23a6ff);
-  color: #f9fbff;
-}
-
-.field-grid {
-  display: grid;
-  grid-template-columns: 1.05fr 1fr 1.1fr;
-  gap: 8px;
+.field-row:last-of-type {
+  margin-bottom: 0;
 }
 
 .field {
   display: flex;
   flex-direction: column;
-}
-
-.label {
+  gap: 4px;
   font-size: 11px;
-  margin-bottom: 3px;
-  color: #9eabcf;
+  color: #a8b3ff;
 }
 
-.top-space {
-  margin-top: 8px;
+.field.grow {
+  flex: 1;
 }
 
-.select {
-  border-radius: 6px;
-  border: none;
-  padding: 4px 6px;
-  font-size: 11px;
-  background: #050b18;
-  color: #f5f7ff;
-  outline: 1px solid rgba(255, 255, 255, 0.15);
+.field-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.85;
 }
 
-.select.multi {
-  min-height: 60px;
+input[type="text"],
+select {
+  background: rgba(11, 18, 40, 0.95);
+  border-radius: 8px;
+  border: 1px solid rgba(74, 101, 176, 0.7);
+  color: #f7f9ff;
+  padding: 6px 8px;
+  font-size: 12px;
+  outline: none;
 }
 
-.check-label {
-  margin-top: 4px;
-  font-size: 11px;
-  color: #9eabcf;
+input[type="text"]:focus,
+select:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.5);
+}
+
+select[multiple] {
+  min-width: 150px;
+  height: 100px;
+}
+
+.checkbox {
   display: flex;
   align-items: center;
   gap: 4px;
+  margin-top: 16px;
+  font-size: 11px;
 }
 
-/* Results */
+.checkbox input {
+  margin: 0;
+}
 
-.results-section {
-  padding: 6px 0 10px 0;
-  flex: 1;
-  overflow-y: auto;
+.btn {
+  border-radius: 999px;
+  border: none;
+  padding: 6px 14px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.12s ease, transform 0.1s ease;
+}
+
+.btn.primary {
+  background: linear-gradient(135deg, #2563eb, #22c1c3);
+  color: white;
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.5);
+}
+
+.btn.primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 22px rgba(37, 99, 235, 0.65);
+}
+
+.search-btn {
+  margin-left: 6px;
+  height: 30px;
+}
+
+/* Small "Clear" links under lists */
+
+.small-clear {
+  margin-top: 3px;
+  align-self: flex-start;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 255, 0.35);
+  background: rgba(15, 23, 42, 0.9);
+  color: #a5b4fc;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.small-clear:hover {
+  background: rgba(59, 130, 246, 0.85);
+  border-color: transparent;
+  color: #ffffff;
+}
+
+/* ========= Content / Results ========= */
+
+.content {
+  grid-area: content;
+  overflow: hidden;
+  background: rgba(5, 10, 25, 0.92);
+  border-radius: 12px;
+  border: 1px solid rgba(55, 65, 106, 0.6);
+  position: relative;
 }
 
 .results {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 0 6px 0 6px;
+  max-height: 100%;
+  overflow-y: auto;
+  padding: 8px;
 }
 
 .empty {
-  margin: 6px 12px;
+  padding: 16px;
   font-size: 12px;
-  color: #7f89aa;
+  color: #9ca3c7;
 }
 
-.result-row {
+/* ========= Result card ========= */
+
+.result-card {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  gap: 6px;
-  padding: 6px 8px;
-  border-radius: 8px;
-  background: rgba(9, 17, 40, 0.92);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.02);
+  gap: 8px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  border-radius: 10px;
+  background: radial-gradient(circle at top left, rgba(37, 99, 235, 0.08), transparent 55%),
+    rgba(15, 23, 42, 0.96);
+  border: 1px solid rgba(51, 65, 118, 0.8);
   cursor: default;
+  transition: background 0.12s ease, border-color 0.12s ease, transform 0.08s ease;
 }
 
-.result-row:hover {
-  background: rgba(19, 33, 70, 0.98);
+.result-card:hover {
+  background: radial-gradient(circle at top left, rgba(56, 189, 248, 0.15), transparent 60%),
+    rgba(15, 23, 42, 0.98);
+  border-color: rgba(96, 165, 250, 0.9);
+  transform: translateY(-1px);
 }
 
-.result-main {
+.card-main {
   flex: 1;
+  min-width: 0;
 }
 
-.title-line {
+.card-header {
   display: flex;
   justify-content: space-between;
   gap: 6px;
-  align-items: baseline;
+  font-size: 12px;
+  margin-bottom: 4px;
 }
 
-.title {
-  font-size: 13px;
+.card-header .title {
   font-weight: 600;
+  color: #e5e7ff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.year-type {
+.card-header .year-type {
   font-size: 11px;
-  color: #8e96bc;
+  color: #9ca3c7;
+  white-space: nowrap;
 }
 
-.meta-line {
+.card-meta {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 6px;
-  margin-top: 3px;
-  flex-wrap: wrap;
+  gap: 8px;
 }
+
+/* IMDb pill on the right of providers area */
 
 .imdb-badge {
-  font-size: 11px;
-  padding: 2px 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 10px;
   border-radius: 999px;
-  background: #f5c518;
-  color: #000;
+  font-size: 11px;
   font-weight: 600;
+  white-space: nowrap;
+  background: linear-gradient(135deg, #facc15, #f97316);
+  color: #111827;
+  min-width: 64px;
 }
 
+/* Providers row, left side */
+
 .providers {
+  flex: 1;
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
 }
 
 .provider-tag {
-  font-size: 10px;
-  padding: 2px 6px;
+  padding: 2px 8px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  color: #dfe6ff;
+  font-size: 10px;
   white-space: nowrap;
+  background: rgba(31, 41, 79, 0.95);
+  border: 1px solid rgba(75, 85, 154, 0.9);
 }
 
-/* Provider colors */
+/* Color accents per provider */
 
 .provider-netflix {
-  border-color: #e50914;
-  color: #ff9da4;
+  background: rgba(220, 38, 38, 0.12);
+  border-color: rgba(220, 38, 38, 0.6);
+  color: #fecaca;
 }
 
 .provider-prime {
-  border-color: #00a8e1;
-  color: #9de1ff;
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.7);
 }
 
 .provider-hulu {
-  border-color: #1ce783;
-  color: #aaf5cf;
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.7);
 }
 
 .provider-disney {
-  border-color: #1f80ff;
-  color: #a3c6ff;
+  background: rgba(59, 130, 246, 0.16);
+  border-color: rgba(37, 99, 235, 0.8);
 }
 
 .provider-crunchyroll {
-  border-color: #ff8800;
-  color: #ffd39e;
+  background: rgba(249, 115, 22, 0.12);
+  border-color: rgba(249, 115, 22, 0.8);
 }
 
-.result-actions {
+/* ========= Card actions ========= */
+
+.card-actions {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  align-items: flex-end;
+  justify-content: center;
 }
 
 .btn-icon {
-  border-radius: 999px;
-  border: none;
   width: 22px;
   height: 22px;
-  font-size: 13px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 255, 0.5);
+  background: rgba(15, 23, 42, 0.9);
+  color: #e5e7ff;
+  font-size: 12px;
   cursor: pointer;
-  background: rgba(10, 20, 48, 0.9);
-  color: #f5f7ff;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-icon:hover {
-  background: rgba(31, 75, 255, 0.9);
+  background: rgba(59, 130, 246, 0.92);
+  border-color: transparent;
 }
 
-/* Hover preview */
+.btn-icon.danger {
+  border-color: rgba(248, 113, 113, 0.8);
+  color: #fecaca;
+}
+
+.btn-icon.danger:hover {
+  background: rgba(248, 113, 113, 0.9);
+  color: #111827;
+}
+
+.btn-icon.static {
+  cursor: default;
+  border-color: rgba(52, 211, 153, 0.9);
+  background: rgba(16, 185, 129, 0.18);
+  color: #6ee7b7;
+}
+
+.btn-icon.static:hover {
+  background: rgba(16, 185, 129, 0.18);
+}
+
+/* ========= Preview panel ========= */
 
 .preview {
-  position: fixed;
-  right: 8px;
-  bottom: 10px;
-  width: 230px;
-  background: rgba(9, 17, 40, 0.98);
-  border-radius: 10px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-  padding: 8px;
+  grid-area: preview;
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(55, 65, 106, 0.7);
+  background: radial-gradient(circle at top, rgba(30, 64, 175, 0.6), rgba(15, 23, 42, 0.95));
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
   display: flex;
-  gap: 8px;
-  pointer-events: none; /* so it never blocks clicks */
-  z-index: 9999;
+  align-items: center;
+  justify-content: center;
 }
 
 .preview.hidden {
-  opacity: 0;
-  transform: translateY(4px);
-  transition: opacity 120ms ease, transform 120ms ease;
-}
-
-.preview:not(.hidden) {
-  opacity: 1;
-  transform: translateY(0);
-  transition: opacity 120ms ease, transform 120ms ease;
+  display: none;
 }
 
 .preview-poster {
-  width: 70px;
-  height: 105px;
-  border-radius: 6px;
-  object-fit: cover;
-  background: #11172f;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 12px;
 }
 
+/* We are not using the preview body text anymore */
 .preview-body {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
+  display: none !important;
 }
 
-.preview-title {
-  font-size: 13px;
-  font-weight: 600;
+/* ========= Scrollbar styling ========= */
+
+.results::-webkit-scrollbar,
+select[multiple]::-webkit-scrollbar {
+  width: 6px;
 }
 
-.preview-sub {
-  font-size: 11px;
-  color: #9eabcf;
+.results::-webkit-scrollbar-track,
+select[multiple]::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-.preview-imdb {
-  font-size: 11px;
-  margin-top: 2px;
-}
-
-.preview-providers {
-  margin-top: 4px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 3px;
-}
-
-.small-clear {
-  font-size: 10px;
-  padding: 2px 6px;
-  margin-bottom: 4px;
-  background: #182034;
-  border: 1px solid var(--border-subtle);
-  color: var(--text-muted);
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.small-clear:hover {
-  color: var(--accent);
-  border-color: var(--accent);
+.results::-webkit-scrollbar-thumb,
+select[multiple]::-webkit-scrollbar-thumb {
+  background: rgba(55, 65, 106, 0.9);
+  border-radius: 999px;
 }

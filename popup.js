@@ -5,24 +5,26 @@ const PROXY_URL = "http://localhost:8080";
 
 // Shared state
 const state = {
-  tab: "search", // "search" | "watchlist" | "watched"
-  type: "movie", // "movie" | "tv"
+  tab: "search", // search | watchlist | watched
+  type: "movie", // movie | tv
   q: "",
   genres: [],
   selectedGenres: new Set(),
+  providerFilter: new Set(),
+  minRating: "",
   onlyAvail: false,
-  minRating: null, // number or null
-  providerFilter: new Set(), // canonical provider keys
 };
 
-// DOM references
+// DOM refs
+const appEl = document.getElementById("app");
+
 const elControls = document.getElementById("controls");
 const elQ = document.getElementById("q");
 const elType = document.getElementById("type");
 const elGenre = document.getElementById("genre");
-const elOnlyAvail = document.getElementById("onlyAvail");
 const elMinRating = document.getElementById("minRating");
 const elProviders = document.getElementById("providers");
+const elOnlyAvail = document.getElementById("onlyAvail");
 const elResults = document.getElementById("results");
 const elEmpty = document.getElementById("emptyState");
 const tplRow = document.getElementById("row-tpl");
@@ -32,21 +34,14 @@ const btnTabWatchlist = document.getElementById("tabWatchlist");
 const btnTabWatched = document.getElementById("tabWatched");
 const btnSearch = document.getElementById("btnSearch");
 
-// Hover preview elements
 const previewEl = document.getElementById("hoverPreview");
 const previewPoster = document.getElementById("previewPoster");
-const previewTitle = document.getElementById("previewTitle");
-const previewSub = document.getElementById("previewSub");
-const previewImdb = document.getElementById("previewImdb");
-const previewProviders = document.getElementById("previewProviders");
 
-
-let hidePreviewTimer = null;
 let currentItems = [];
 
-/* ---------------------------------------------------------
-   Storage helpers
---------------------------------------------------------- */
+// ---------------------------------------------------------------------
+// Storage helpers
+// ---------------------------------------------------------------------
 
 const loadList = async (key) =>
   (await chrome.storage.sync.get([key]))[key] || [];
@@ -68,29 +63,32 @@ const removeFrom = async (key, tmdbKey) => {
   await saveList(key, next);
 };
 
-/* ---------------------------------------------------------
-   Proxy GET helper
---------------------------------------------------------- */
+// ---------------------------------------------------------------------
+// Simple proxy GET
+// ---------------------------------------------------------------------
 
 async function pget(path, params = {}) {
   const url = new URL(PROXY_URL + path);
   Object.entries(params).forEach(([k, v]) => {
-    if (v !== undefined && v !== null && v !== "") {
-      url.searchParams.set(k, v);
-    }
+    if (v !== undefined && v !== null) url.searchParams.set(k, v);
   });
   const res = await fetch(url.toString());
   if (!res.ok) throw new Error("HTTP " + res.status);
   return res.json();
 }
 
-/* ---------------------------------------------------------
-   Genres
---------------------------------------------------------- */
+// ---------------------------------------------------------------------
+// Genres
+// ---------------------------------------------------------------------
 
 async function loadGenres() {
-  const data = await pget("/tmdb_genres", { type: state.type });
-  state.genres = data || [];
+  try {
+    const data = await pget("/tmdb_genres", { type: state.type });
+    state.genres = data || [];
+  } catch (err) {
+    console.error("Genre load failed", err);
+    state.genres = [];
+  }
   renderGenreOptions();
 }
 
@@ -105,9 +103,9 @@ function renderGenreOptions() {
   });
 }
 
-/* ---------------------------------------------------------
-   Provider helpers
---------------------------------------------------------- */
+// ---------------------------------------------------------------------
+// Provider helpers
+// ---------------------------------------------------------------------
 
 function providerClass(name) {
   const n = name.toLowerCase();
@@ -116,7 +114,27 @@ function providerClass(name) {
   if (n.includes("hulu")) return "provider-hulu";
   if (n.includes("disney")) return "provider-disney";
   if (n.includes("crunchy")) return "provider-crunchyroll";
+  if (n.includes("hbo") || n.includes("max")) return "provider-max";
+  if (n.includes("apple")) return "provider-apple";
+  if (n.includes("paramount")) return "provider-paramount";
+  if (n.includes("peacock")) return "provider-peacock";
+  if (n.includes("youtube")) return "provider-youtube";
   return "";
+}
+
+function providerKeyFromName(name) {
+  const n = name.toLowerCase();
+  if (n.includes("netflix")) return "netflix";
+  if (n.includes("prime") || n.includes("amazon")) return "prime";
+  if (n.includes("hulu")) return "hulu";
+  if (n.includes("disney")) return "disney";
+  if (n.includes("crunchy")) return "crunchy";
+  if (n.includes("hbo") || n.includes("max")) return "max";
+  if (n.includes("apple")) return "apple";
+  if (n.includes("paramount")) return "paramount";
+  if (n.includes("peacock")) return "peacock";
+  if (n.includes("youtube")) return "youtube";
+  return "other";
 }
 
 function renderProviderTags(container, providers) {
@@ -129,40 +147,18 @@ function renderProviderTags(container, providers) {
     return;
   }
 
-  providers.slice(0, 6).forEach((p) => {
+  providers.slice(0, 8).forEach((p) => {
     const tag = document.createElement("span");
     const cls = providerClass(p);
-    tag.className = `provider-tag ${cls}`.trim();
+    tag.className = "provider-tag " + cls;
     tag.textContent = p;
     container.appendChild(tag);
   });
 }
 
-// Map full provider display name to a canonical key string that
-// matches the multi select values in the filters.
-function providerMatchesFilter(name, filterSet) {
-  if (!filterSet || !filterSet.size) return true;
-  const n = name.toLowerCase();
-
-  const keys = [];
-  if (n.includes("netflix")) keys.push("netflix");
-  if (n.includes("prime") || n.includes("amazon")) keys.push("prime");
-  if (n.includes("hulu")) keys.push("hulu");
-  if (n.includes("disney")) keys.push("disney");
-  if (n.includes("crunchy")) keys.push("crunchy");
-  if (n.includes("hbo") || n.includes("max")) keys.push("max");
-  if (n.includes("apple")) keys.push("apple");
-  if (n.includes("paramount")) keys.push("paramount");
-  if (n.includes("peacock")) keys.push("peacock");
-
-  if (!keys.length) return false;
-  return keys.some((k) => filterSet.has(k));
-}
-
-/* ---------------------------------------------------------
-   Search TMDB, enrich with OMDb and provider info
-   Triggered only on Search button or Enter key
---------------------------------------------------------- */
+// ---------------------------------------------------------------------
+// Search via TMDB + OMDb enrichment
+// ---------------------------------------------------------------------
 
 async function doSearch() {
   if (state.tab !== "search") return;
@@ -170,16 +166,14 @@ async function doSearch() {
   const query = (state.q || "").trim();
   if (!query) {
     renderResults([]);
-    elEmpty.style.display = "block";
-    elEmpty.textContent =
-      "Start typing a title and press Search, or open your Watchlist.";
     return;
   }
 
-  try {
-    const genreIds = [...state.selectedGenres].join(",");
+  const genreIds = [...state.selectedGenres].join(",");
 
-    const tmdb = await pget("/tmdb_search", {
+  let tmdb;
+  try {
+    tmdb = await pget("/tmdb_search", {
       type: state.type,
       query,
       include_adult: "false",
@@ -187,106 +181,108 @@ async function doSearch() {
       page: "1",
       with_genres: genreIds,
     });
+  } catch (err) {
+    console.error("TMDB search failed", err);
+    renderResults([]);
+    return;
+  }
 
-    let results = (tmdb.results || []).slice(0, 12);
+  let results = (tmdb.results || []).slice(0, 12);
 
-    // Client side filtering by genres (for safety)
-    if (genreIds) {
-      const want = new Set([...state.selectedGenres]);
-      results = results.filter((r) =>
-        (r.genre_ids || []).some((id) => want.has(id)),
-      );
-    }
+  const items = await Promise.all(
+    results.map(async (r) => {
+      const tmdbId = r.id;
+      const title =
+        state.type === "movie"
+          ? r.title || r.original_title
+          : r.name || r.original_name;
+      const year = (r.release_date || r.first_air_date || "").slice(0, 4);
 
-    const items = await Promise.all(
-      results.map(async (r) => {
-        const tmdbId = r.id;
-        const title =
-          state.type === "movie"
-            ? r.title || r.original_title
-            : r.name || r.original_name;
-        const year = (r.release_date || r.first_air_date || "").slice(0, 4);
-
-        // external_ids to get imdb_id
+      // external ids to get imdb id
+      let imdbId = null;
+      try {
         const ext = await pget("/tmdb_external_ids", {
           type: state.type,
           id: tmdbId,
         });
-        const imdbId = ext.imdb_id || null;
+        imdbId = ext.imdb_id || null;
+      } catch (err) {
+        console.warn("external ids failed", tmdbId, err);
+      }
 
-        // IMDb rating via OMDb
-        let imdbRating = null;
-        if (imdbId) {
-          try {
-            const omdb = await pget("/omdb/", { i: imdbId });
-            if (omdb && omdb.imdbRating && omdb.imdbRating !== "N/A") {
-              imdbRating = omdb.imdbRating;
-            }
-          } catch (err) {
-            console.warn("OMDb lookup failed for", imdbId, err);
-            imdbRating = null;
+      // IMDb rating via OMDb
+      let imdbRating = null;
+      if (imdbId) {
+        try {
+          const omdb = await pget("/omdb", { i: imdbId });
+          if (omdb && omdb.imdbRating && omdb.imdbRating !== "N/A") {
+            imdbRating = omdb.imdbRating;
           }
+        } catch (err) {
+          console.warn("OMDb failed for", imdbId, err);
         }
+      }
 
-        // providers via TMDB
+      // provider info from TMDB
+      let offers = [];
+      try {
         const prov = await pget("/tmdb_providers", {
           type: state.type,
           id: tmdbId,
         });
-
         const us = (prov.results && prov.results[COUNTRY]) || {};
-        const offers = [
+        offers = [
           ...(us.flatrate || []),
           ...(us.ads || []),
           ...(us.rent || []),
           ...(us.buy || []),
         ];
+      } catch (err) {
+        console.warn("provider lookup failed", tmdbId, err);
+      }
 
-        if (state.onlyAvail && offers.length === 0) return null;
+      if (state.onlyAvail && offers.length === 0) return null;
 
-        const providers = offers.map((o) => o.provider_name);
+      return {
+        key: `${state.type}:${tmdbId}`,
+        tmdbId,
+        type: state.type,
+        title,
+        year,
+        poster: r.poster_path ? TMDB_IMG + r.poster_path : "",
+        imdbId,
+        imdbRating,
+        providers: offers.map((o) => o.provider_name),
+      };
+    })
+  );
 
-        // Filter on provider multi select
-        if (state.providerFilter.size) {
-          const ok = providers.some((name) =>
-            providerMatchesFilter(name, state.providerFilter),
-          );
-          if (!ok) return null;
-        }
+  let filtered = items.filter(Boolean);
 
-        // Filter on min IMDb rating
-        if (state.minRating && imdbRating) {
-          if (Number(imdbRating) < state.minRating) return null;
-        }
-
-        return {
-          key: `${state.type}:${tmdbId}`,
-          tmdbId,
-          type: state.type,
-          title,
-          year,
-          poster: r.poster_path ? TMDB_IMG + r.poster_path : "",
-          imdbId,
-          imdbRating,
-          providers,
-        };
-      }),
-    );
-
-    const clean = items.filter(Boolean);
-    renderResults(clean);
-  } catch (err) {
-    console.error("Search error", err);
-    renderResults([]);
-    elEmpty.style.display = "block";
-    elEmpty.textContent =
-      "There was a problem talking to the proxy. Check the Node server.";
+  // Extra filters: min IMDb and provider
+  if (state.minRating) {
+    const min = parseFloat(state.minRating);
+    filtered = filtered.filter((item) => {
+      if (!item.imdbRating) return false;
+      const val = parseFloat(item.imdbRating);
+      return !Number.isNaN(val) && val >= min;
+    });
   }
+
+  if (state.providerFilter.size > 0) {
+    filtered = filtered.filter((item) => {
+      if (!item.providers || !item.providers.length) return false;
+      const keys = item.providers.map(providerKeyFromName);
+      return keys.some((k) => state.providerFilter.has(k));
+    });
+  }
+
+  renderResults(filtered);
 }
 
-/* ---------------------------------------------------------
-   Rendering
---------------------------------------------------------- */
+// ---------------------------------------------------------------------
+// Rendering and hover preview
+// ---------------------------------------------------------------------
 
 function renderResults(items) {
   currentItems = items;
@@ -296,7 +292,7 @@ function renderResults(items) {
     elEmpty.style.display = "block";
     elEmpty.textContent =
       state.tab === "search"
-        ? "No matches. Try a different title or filter."
+        ? "No matches yet. Try a different title or filters."
         : "Nothing here yet.";
     return;
   }
@@ -310,82 +306,136 @@ function renderResults(items) {
 
     node.querySelector(".title").textContent = item.title;
     node.querySelector(".year-type").textContent = item.year
-      ? `${labelType} · ${item.year}`
+      ? `${labelType} • ${item.year}`
       : labelType;
 
-    node.querySelector(".imdb-badge").textContent = item.imdbRating
-      ? `IMDb ${item.imdbRating}`
-      : "IMDb N/A";
+    const scoreEl = node.querySelector(".imdb-score");
+    if (item.imdbRating) {
+      scoreEl.textContent = item.imdbRating;
+    } else {
+      scoreEl.textContent = "N/A";
+    }
 
     renderProviderTags(node.querySelector(".providers"), item.providers);
 
     const btnWatchlist = node.querySelector(".btn-watchlist");
     const btnWatched = node.querySelector(".btn-watched");
+    const btnRemove = node.querySelector(".btn-remove");
 
+    // Configure actions based on tab
+    if (state.tab === "search") {
+      btnWatchlist.style.display = "inline-flex";
+      btnWatched.style.display = "inline-flex";
+      btnRemove.style.display = "none";
+
+      btnWatchlist.disabled = false;
+      btnWatched.disabled = false;
+
+      btnWatchlist.title = "Add to watchlist";
+      btnWatched.title = "Mark as watched";
+    } else if (state.tab === "watchlist") {
+      btnWatchlist.style.display = "none";
+      btnWatched.style.display = "inline-flex";
+      btnRemove.style.display = "inline-flex";
+
+      btnWatched.disabled = false;
+      btnWatched.classList.add("active");
+      btnWatched.title = "Mark as watched";
+      btnRemove.title = "Remove from watchlist";
+    } else if (state.tab === "watched") {
+      btnWatchlist.style.display = "none";
+      btnWatched.style.display = "inline-flex";
+      btnRemove.style.display = "inline-flex";
+
+      btnWatched.disabled = true;
+      btnWatched.classList.add("active");
+      btnWatched.title = "Already watched";
+      btnRemove.title = "Remove from watched";
+    }
+
+    // Click handlers
     btnWatchlist.addEventListener("click", async (e) => {
       e.stopPropagation();
       await addTo("watchlist", item);
-      btnWatchlist.textContent = "★";
+      btnWatchlist.classList.add("active");
     });
 
     btnWatched.addEventListener("click", async (e) => {
       e.stopPropagation();
-      await removeFrom("watchlist", item.key);
+      if (state.tab === "watchlist") {
+        await removeFrom("watchlist", item.key);
+      }
       await addTo("watched", item);
-      btnWatched.textContent = "✓";
+      if (state.tab === "search") {
+        btnWatched.classList.add("active");
+      } else {
+        await refreshTab();
+      }
     });
 
-    node.addEventListener("mouseenter", () => showPreview(item));
-    node.addEventListener("mouseleave", scheduleHidePreview);
+    btnRemove.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      const listKey = state.tab === "watchlist" ? "watchlist" : "watched";
+      await removeFrom(listKey, item.key);
+      await refreshTab();
+    });
+
+    // Hover preview for poster
+    node.addEventListener("mouseenter", () => showPreview(item, node));
+    node.addEventListener("mouseleave", hidePreviewSoon);
 
     elResults.appendChild(node);
   });
 }
 
-/* ---------------------------------------------------------
-   Hover preview
---------------------------------------------------------- */
+// Preview helpers
 
-function showPreview(item) {
-  if (hidePreviewTimer) {
-    clearTimeout(hidePreviewTimer);
-    hidePreviewTimer = null;
-  }
+let hidePreviewTimer = null;
 
-  if (!item) {
-    previewEl.classList.add("hidden");
+function showPreview(item, node) {
+  if (!item.poster) {
+    hidePreview();
     return;
   }
 
-  previewPoster.src =
-    item.poster || "data:image/gif;base64,R0lGODlhAQABAAAAACw=";
-  previewTitle.textContent = item.title;
+  previewPoster.src = item.poster;
 
-  const labelType = item.type === "movie" ? "Movie" : "TV";
-  previewSub.textContent = item.year
-    ? `${labelType} · ${item.year}`
-    : labelType;
+  const appRect = appEl.getBoundingClientRect();
+  const rowRect = node.getBoundingClientRect();
 
-  previewImdb.textContent = item.imdbRating
-    ? `IMDb rating: ${item.imdbRating}`
-    : "IMDb rating not available";
-
-  previewProviders.innerHTML = "";
-  renderProviderTags(previewProviders, item.providers);
+  const top = rowRect.top - appRect.top + 4;
+  previewEl.style.top = `${top}px`;
+  previewEl.style.right = "8px";
 
   previewEl.classList.remove("hidden");
+  previewEl.classList.add("visible");
 }
 
-function scheduleHidePreview() {
+function hidePreview() {
+  previewEl.classList.remove("visible");
+  previewEl.classList.add("hidden");
+}
+
+function hidePreviewSoon() {
   if (hidePreviewTimer) clearTimeout(hidePreviewTimer);
-  hidePreviewTimer = setTimeout(() => {
-    previewEl.classList.add("hidden");
-  }, 140);
+  hidePreviewTimer = setTimeout(hidePreview, 120);
 }
 
-/* ---------------------------------------------------------
-   Tabs and input wiring
---------------------------------------------------------- */
+// ---------------------------------------------------------------------
+// Tabs and input wiring
+// ---------------------------------------------------------------------
+
+async function refreshTab() {
+  if (state.tab === "search") {
+    await doSearch();
+  } else if (state.tab === "watchlist") {
+    const items = await loadList("watchlist");
+    renderResults(items);
+  } else if (state.tab === "watched") {
+    const items = await loadList("watched");
+    renderResults(items);
+  }
+}
 
 function setTab(tab) {
   state.tab = tab;
@@ -395,40 +445,14 @@ function setTab(tab) {
   btnTabWatched.classList.toggle("active", tab === "watched");
 
   elControls.style.display = tab === "search" ? "block" : "none";
+  hidePreview();
 
-  if (tab === "search") {
-    // Do not auto search, only if there is already a query
-    if (state.q.trim()) {
-      doSearch();
-    } else {
-      renderResults([]);
-      elEmpty.style.display = "block";
-      elEmpty.textContent =
-        "Start typing a title and press Search, or open your Watchlist.";
-    }
-  } else if (tab === "watchlist") {
-    loadList("watchlist").then((items) => renderResults(items));
-  } else if (tab === "watched") {
-    loadList("watched").then((items) => renderResults(items));
-  }
+  refreshTab();
 }
-
 
 btnTabSearch.addEventListener("click", () => setTab("search"));
 btnTabWatchlist.addEventListener("click", () => setTab("watchlist"));
 btnTabWatched.addEventListener("click", () => setTab("watched"));
-
-document.getElementById("clearGenres").addEventListener("click", () => {
-  state.selectedGenres.clear();
-  renderGenreOptions();
-  if (state.q.trim()) doSearch();
-});
-document.getElementById("clearProviders").addEventListener("click", () => {
-  state.providerFilter.clear();
-  [...elProviders.options].forEach(o => (o.selected = false));
-  if (state.q.trim()) doSearch();
-});
-
 
 btnSearch.addEventListener("click", () => {
   state.q = elQ.value;
@@ -446,38 +470,48 @@ elType.addEventListener("change", async (e) => {
   state.type = e.target.value;
   state.selectedGenres.clear();
   await loadGenres();
-  // Only re search if there is a query
-  if (state.q.trim()) doSearch();
+  if (state.q.trim()) await doSearch();
 });
 
 elGenre.addEventListener("change", (e) => {
   state.selectedGenres = new Set(
-    [...e.target.selectedOptions].map((o) => Number(o.value)),
+    [...e.target.selectedOptions].map((o) => Number(o.value))
   );
-  if (state.q.trim()) doSearch();
+});
+
+elMinRating.addEventListener("change", (e) => {
+  state.minRating = e.target.value || "";
+  if (state.tab === "search" && state.q.trim()) doSearch();
+});
+
+elProviders.addEventListener("change", (e) => {
+  const vals = [...e.target.selectedOptions].map((o) => o.value);
+  state.providerFilter = new Set(vals);
+  if (state.tab === "search" && state.q.trim()) doSearch();
 });
 
 elOnlyAvail.addEventListener("change", (e) => {
   state.onlyAvail = e.target.checked;
-  if (state.q.trim()) doSearch();
+  if (state.tab === "search" && state.q.trim()) doSearch();
 });
 
-elMinRating.addEventListener("change", (e) => {
-  const val = e.target.value;
-  state.minRating = val ? Number(val) : null;
-  if (state.q.trim()) doSearch();
+document.getElementById("clearGenres").addEventListener("click", () => {
+  state.selectedGenres.clear();
+  [...elGenre.options].forEach((o) => (o.selected = false));
+  if (state.tab === "search" && state.q.trim()) doSearch();
 });
 
-elProviders.addEventListener("change", (e) => {
-  state.providerFilter = new Set(
-    [...e.target.selectedOptions].map((o) => o.value),
-  );
-  if (state.q.trim()) doSearch();
-});
+document
+  .getElementById("clearProviders")
+  .addEventListener("click", () => {
+    state.providerFilter.clear();
+    [...elProviders.options].forEach((o) => (o.selected = false));
+    if (state.tab === "search" && state.q.trim()) doSearch();
+  });
 
-/* ---------------------------------------------------------
-   Init
---------------------------------------------------------- */
+// ---------------------------------------------------------------------
+// Init
+// ---------------------------------------------------------------------
 
 (async () => {
   await loadGenres();
