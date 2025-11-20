@@ -122,8 +122,15 @@ async function doSearch() {
 
     let imdbRating = null;
     if (imdbId) {
-      const omdb = await pget("/omdb/", { i: imdbId });
-      if (omdb && omdb.imdbRating && omdb.imdbRating !== "N/A") imdbRating = omdb.imdbRating;
+      try {
+        const omdb = await pget("/omdb/", { i: imdbId });
+        if (omdb && omdb.imdbRating && omdb.imdbRating !== "N/A") {
+          imdbRating = omdb.imdbRating;
+        }
+      } catch (err) {
+        console.warn("OMDb lookup failed for", imdbId, err);
+        imdbRating = null;  // fail gracefully
+      }
     }
 
     const prov = await pget(type === "movie" ? `/tmdb/movie/${item.tmdbId}/watch/providers` : `/tmdb/tv/${item.tmdbId}/watch/providers`);

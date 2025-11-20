@@ -3,20 +3,23 @@
   "name": "Stream Scout",
   "version": "0.3.0",
   "description": "IMDb score, where to watch, and genre filters right in your browser. Track watched and watchlist.",
+
   "action": { "default_popup": "popup.html" },
   "side_panel": { "default_path": "sidepanel.html" },
   "background": { "service_worker": "sw.js" },
+
   "permissions": ["storage", "contextMenus", "notifications", "omnibox"],
+
   "host_permissions": [
     "https://*.imdb.com/*",
+    "https://*.tmdb.org/*",
     "https://*.netflix.com/*",
     "https://*.hulu.com/*",
     "https://*.primevideo.com/*",
     "https://*.disneyplus.com/*",
-    "https://api.themoviedb.org/*",
-    "https://www.omdbapi.com/*",
-    "https://your-proxy.example.com/*"
+    "http://localhost:8080/*"
   ],
+
   "content_scripts": [
     {
       "matches": [
@@ -32,5 +35,10 @@
       "run_at": "document_idle"
     }
   ],
-  "icons": { "16": "assets/icons/16.png", "32": "assets/icons/32.png", "128": "assets/icons/128.png" }
+
+  "icons": {
+    "16": "assets/icons/16.png",
+    "32": "assets/icons/32.png",
+    "128": "assets/icons/128.png"
+  }
 }
