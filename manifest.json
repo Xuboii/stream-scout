@@ -4,20 +4,37 @@
   "version": "0.3.0",
   "description": "IMDb score, where to watch, and genre filters right in your browser. Track watched and watchlist.",
 
-  "action": { "default_popup": "popup.html" },
-  "side_panel": { "default_path": "sidepanel.html" },
-  "background": { "service_worker": "sw.js" },
+  "action": {
+    "default_popup": "popup.html"
+  },
 
-  "permissions": ["storage", "contextMenus", "notifications", "omnibox"],
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+
+  "background": {
+    "service_worker": "sw.js"
+  },
+
+  "omnibox": {
+    "keyword": "ss"
+  },
+
+  "permissions": [
+    "storage",
+    "contextMenus",
+    "notifications",
+    "omnibox"
+  ],
 
   "host_permissions": [
+    "http://localhost:8080/*",
     "https://*.imdb.com/*",
     "https://*.tmdb.org/*",
     "https://*.netflix.com/*",
     "https://*.hulu.com/*",
     "https://*.primevideo.com/*",
-    "https://*.disneyplus.com/*",
-    "http://localhost:8080/*"
+    "https://*.disneyplus.com/*"
   ],
 
   "content_scripts": [

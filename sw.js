@@ -1,4 +1,4 @@
-const PROXY = "https://your-proxy.example.com";
+const PROXY = "http://localhost:8080";
 
 // Omnibox: type "ss dune"
 chrome.omnibox.setDefaultSuggestion({ description: "Search Stream Scout" });
@@ -11,7 +11,7 @@ chrome.omnibox.onInputEntered.addListener(async (text) => {
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
     id: "ssLookup",
-    title: "Stream Scout: lookup “%s”",
+    title: "Stream Scout: lookup \"%s\"",
     contexts: ["selection"]
   });
 });

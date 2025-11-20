@@ -2,7 +2,7 @@ const TMDB_IMG = "https://image.tmdb.org/t/p/w185";
 const COUNTRY = "US"; // make this user selectable later
 
 // Use a tiny proxy that adds your API keys in server side headers
-const PROXY_URL = "https://your-proxy.example.com";
+const PROXY_URL = "http://localhost:8080";
 
 const state = {
   tab: "search",       // "search" | "watchlist" | "watched"
@@ -59,11 +59,15 @@ async function pget(path, params = {}) {
 
 // 1) Genres
 async function loadGenres() {
-  const path = state.type === "movie" ? "/tmdb/genre/movie/list" : "/tmdb/genre/tv/list";
+  const path = state.type === "movie"
+    ? "/tmdb/genre/movie/list"
+    : "/tmdb/genre/tv/list";
+
   const data = await pget(path, { language: "en-US" });
   state.genres = data.genres || [];
   renderGenreOptions();
 }
+
 
 function renderGenreOptions() {
   elGenre.innerHTML = "";
