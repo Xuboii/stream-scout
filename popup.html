@@ -1,54 +1,108 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
-<head>
-  <meta charset="utf-8" />
-  <title>Stream Scout</title>
-  <link rel="stylesheet" href="styles.css" />
-</head>
-<body>
-  <header>
-    <h1>Stream Scout</h1>
-    <div class="row">
-      <input id="q" type="search" placeholder="Search movies or TV shows" />
-      <select id="type">
-        <option value="movie">Movies</option>
-        <option value="tv">TV</option>
-      </select>
-    </div>
-    <div class="row">
-      <select id="genre" multiple size="5" title="Filter by genre"></select>
-    </div>
-    <div class="row">
-      <label><input type="checkbox" id="onlyAvail" /> Show only with providers</label>
-    </div>
-  </header>
+  <head>
+    <meta charset="utf-8" />
+    <title>Stream Scout</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header class="header">
+      <h1 class="logo">Stream Scout</h1>
+      <nav class="tabs">
+        <button id="tabSearch" class="tab active">Search</button>
+        <button id="tabWatchlist" class="tab">Watchlist</button>
+        <button id="tabWatched" class="tab">Watched</button>
+      </nav>
+    </header>
 
-  <main id="results"></main>
+    <section id="controls" class="controls">
+      <div class="row">
+        <input
+          id="q"
+          class="input"
+          type="text"
+          placeholder="Search movies or TV shows"
+        />
+      </div>
 
-  <footer>
-    <nav>
-      <button id="tabSearch" class="active">Search</button>
-      <button id="tabWatchlist">Watchlist</button>
-      <button id="tabWatched">Watched</button>
-    </nav>
-  </footer>
+      <div class="row row-compact">
+        <label class="field">
+          <span class="field-label">Type</span>
+          <select id="type">
+            <option value="movie">Movies</option>
+            <option value="tv">TV shows</option>
+          </select>
+        </label>
 
-  <template id="card-tpl">
-    <article class="card">
-      <img class="poster" alt="Poster" />
-      <div class="meta">
-        <h2 class="title"></h2>
-        <div class="sub"></div>
-        <div class="imdb"></div>
-        <div class="providers"></div>
-        <div class="actions">
-          <button class="btn-watchlist">Add to Watchlist</button>
-          <button class="btn-watched">Mark Watched</button>
+        <label class="field checkbox-field">
+          <input type="checkbox" id="onlyAvail" />
+          <span>Only where available</span>
+        </label>
+      </div>
+
+      <div class="row">
+        <label class="field full">
+          <span class="field-label">Genres</span>
+          <select id="genre" multiple size="5"></select>
+        </label>
+      </div>
+    </section>
+
+    <main class="main">
+      <div id="emptyState" class="empty">
+        Start typing a title to search, or open your Watchlist.
+      </div>
+      <ul id="results" class="results-list"></ul>
+    </main>
+
+    <!-- Hover preview that appears when you hover a row -->
+    <div id="hoverPreview" class="hover-preview hidden">
+      <div class="preview-card">
+        <img
+          id="previewPoster"
+          class="preview-poster"
+          src=""
+          alt="Poster preview"
+        />
+        <div class="preview-body">
+          <div id="previewTitle" class="preview-title"></div>
+          <div id="previewSub" class="preview-sub"></div>
+          <div id="previewImdb" class="preview-imdb"></div>
+          <div id="previewProviders" class="preview-providers"></div>
         </div>
       </div>
-    </article>
-  </template>
+    </div>
 
-  <script src="popup.js" type="module"></script>
-</body>
+    <!-- Template for a compact result row -->
+    <template id="row-tpl">
+      <li class="result-row">
+        <div class="row-main">
+          <div class="row-title-line">
+            <span class="title"></span>
+            <span class="year-type"></span>
+          </div>
+          <div class="row-meta">
+            <span class="imdb-badge"></span>
+            <div class="providers"></div>
+          </div>
+        </div>
+        <div class="row-actions">
+          <button
+            class="icon-btn btn-watchlist"
+            title="Add to watchlist"
+          >
+            ☆
+          </button>
+          <button
+            class="icon-btn btn-watched"
+            title="Mark as watched"
+          >
+            ✔
+          </button>
+        </div>
+      </li>
+    </template>
+
+    <script src="popup.js" type="module"></script>
+  </body>
 </html>
