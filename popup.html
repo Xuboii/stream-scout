@@ -3,12 +3,12 @@
   <head>
     <meta charset="utf-8" />
     <title>Stream Scout</title>
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
-    <div class="popup-root">
-      <header class="top-bar">
-        <div class="logo">Stream Scout</div>
+    <div id="app" class="popup">
+      <header class="header">
+        <h1 class="title">Stream Scout</h1>
         <nav class="tabs">
           <button id="tabSearch" class="tab active">Search</button>
           <button id="tabWatchlist" class="tab">Watchlist</button>
@@ -16,116 +16,120 @@
         </nav>
       </header>
 
+      <!-- Search controls (hidden on Watchlist / Watched) -->
       <section id="controls" class="controls">
         <div class="field-row">
-          <input
-            id="q"
-            type="text"
-            class="input"
-            placeholder="Search movies or TV shows"
-          />
-          <button id="btnSearch" class="primary-btn">Search</button>
+          <div class="field grow">
+            <label class="field-label" for="q">Title</label>
+            <input
+              id="q"
+              type="text"
+              placeholder="Search movies or TV shows"
+            />
+          </div>
+          <button id="btnSearch" class="btn primary search-btn">
+            Search
+          </button>
         </div>
 
-        <div class="field-grid">
+        <div class="field-row">
           <div class="field">
-            <label class="label">Type</label>
-            <select id="type" class="select">
+            <label class="field-label" for="type">Type</label>
+            <select id="type">
               <option value="movie">Movies</option>
               <option value="tv">TV shows</option>
             </select>
-            <label class="check-label">
-              <input id="onlyAvail" type="checkbox" />
-              Only where available
+          </div>
+          <label class="field checkbox">
+            <input type="checkbox" id="onlyAvail" />
+            <span>Show only available</span>
+          </label>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label class="field-label" for="genre">Genres</label>
+            <button id="clearGenres" class="small-clear">Clear</button>
+            <select id="genre" multiple size="6"></select>
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="minRating">
+              Min IMDb rating
             </label>
-          </div>
-
-          <div class="field">
-            <label class="label">Genres</label>
-            <select
-              id="genre"
-              class="select multi"
-              size="6"
-              multiple
-            ></select>
-          </div>
-
-          <div class="field">
-            <label class="label">Min IMDb rating</label>
-            <select id="minRating" class="select">
+            <select id="minRating">
               <option value="">Any</option>
-              <option value="9">9+</option>
-              <option value="8">8+</option>
-              <option value="7">7+</option>
-              <option value="6">6+</option>
-              <option value="5">5+</option>
+              <option value="6">6.0</option>
+              <option value="7">7.0</option>
+              <option value="7.5">7.5</option>
+              <option value="8">8.0</option>
+              <option value="8.5">8.5</option>
+              <option value="9">9.0</option>
             </select>
+          </div>
 
-            <label class="label top-space">Show only on</label>
-            <select
-              id="providerFilter"
-              class="select multi"
-              size="5"
-              multiple
-            >
-              <option value="Netflix">Netflix</option>
-              <option value="Prime">Amazon Prime</option>
-              <option value="Hulu">Hulu</option>
-              <option value="Disney">Disney+</option>
-              <option value="Crunchyroll">Crunchyroll</option>
-              <option value="HBO">HBO Max</option>
+          <div class="field">
+            <label class="field-label" for="providers">Streaming Provider</label>
+            <button id="clearProviders" class="small-clear">Clear</button>
+            <select id="providers" multiple size="6">
+              <option value="netflix">Netflix</option>
+              <option value="prime">Amazon Prime</option>
+              <option value="hulu">Hulu</option>
+              <option value="disney">Disney+</option>
+              <option value="crunchy">Crunchyroll</option>
+              <option value="max">Max / HBO</option>
+              <option value="apple">Apple TV</option>
+              <option value="paramount">Paramount+</option>
+              <option value="peacock">Peacock</option>
             </select>
           </div>
         </div>
       </section>
 
-      <section class="results-section">
-        <p id="emptyState" class="empty">
-          Start typing a title and press Search, or open your Watchlist.
-        </p>
+      <section id="content" class="content">
         <div id="results" class="results"></div>
+        <div id="emptyState" class="empty">
+          Start typing a title and press Search, or open your Watchlist.
+        </div>
       </section>
 
+      <!-- Hover preview panel on the right side -->
+      <aside id="hoverPreview" class="preview hidden">
+        <img id="previewPoster" class="preview-poster" alt="" />
+        <div class="preview-body"></div>
+      </aside>
+
+      <!-- Template for each result row -->
       <template id="row-tpl">
-        <article class="result-row">
-          <div class="result-main">
-            <div class="title-line">
+        <div class="result-card">
+          <div class="card-main">
+            <div class="card-header">
               <span class="title"></span>
               <span class="year-type"></span>
             </div>
-            <div class="meta-line">
+            <div class="card-meta">
               <span class="imdb-badge"></span>
               <div class="providers"></div>
             </div>
           </div>
-          <div class="result-actions">
+          <div class="card-actions">
             <button
               class="btn-icon btn-watchlist"
-              title="Add to Watchlist"
+              title="Add to watchlist"
             >
               ☆
             </button>
             <button
               class="btn-icon btn-watched"
-              title="Mark watched"
+              title="Mark as watched"
             >
               ✓
             </button>
           </div>
-        </article>
-      </template>
-
-      <aside id="hoverPreview" class="preview hidden">
-        <img id="previewPoster" class="preview-poster" />
-        <div class="preview-body">
-          <div id="previewTitle" class="preview-title"></div>
-          <div id="previewSub" class="preview-sub"></div>
-          <div id="previewImdb" class="preview-imdb"></div>
-          <div id="previewProviders" class="preview-providers"></div>
         </div>
-      </aside>
+      </template>
     </div>
 
-    <script src="popup.js" type="module"></script>
+    <script src="popup.js" type="module" defer></script>
   </body>
 </html>

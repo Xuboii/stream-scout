@@ -334,3 +334,19 @@ body {
   flex-wrap: wrap;
   gap: 3px;
 }
+
+.small-clear {
+  font-size: 10px;
+  padding: 2px 6px;
+  margin-bottom: 4px;
+  background: #182034;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.small-clear:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
