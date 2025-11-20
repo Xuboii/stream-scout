@@ -22,6 +22,11 @@ chrome.contextMenus.onClicked.addListener(async (info) => {
   await chrome.windows.create({ url, type: "popup", width: 380, height: 620 });
 });
 
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  sendResponse({ ok: true });
+  return true;
+});
+
 // Simple cache idea for providers or genres (extend as needed)
 const cache = new Map();
 async function cachedJson(key, fetcher, ttlMs = 3600_000) {
