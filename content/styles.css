@@ -1,24 +1,336 @@
-.ss-panel {
-  position: fixed;
-  right: 12px;
-  bottom: 12px;
-  z-index: 2147483647;
-  display: grid;
-  grid-template-columns: 64px 1fr;
-  gap: 10px;
-  padding: 10px;
-  max-width: 360px;
-  background: #ffffff;
-  border: 1px solid #ececec;
-  border-radius: 10px;
-  box-shadow: 0 4px 16px rgba(0,0,0,.12);
-  font: 13px system-ui, sans-serif;
-  color: #111;
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  color: #f5f7ff;
+  background: #050b18;
 }
-.ss-poster { width: 64px; height: 96px; border-radius: 6px; object-fit: cover; background: #f4f4f4; }
-.ss-title { font-weight: 700; }
-.ss-sub { color: #666; margin: 2px 0 4px; }
-.ss-imdb { font-weight: 700; margin-bottom: 6px; }
-.ss-tag { display: inline-block; font-size: 12px; padding: 2px 6px; margin: 0 4px 4px 0; border-radius: 999px; border: 1px solid #dcdcff; background: #f3f3ff; }
-.ss-actions { margin-top: 6px; display: flex; gap: 6px; }
-.ss-actions button { padding: 4px 8px; border: 1px solid #ddd; border-radius: 6px; background: #fafafa; cursor: pointer; }
+
+.popup-root {
+  width: 360px;
+  min-height: 420px;
+  background: radial-gradient(circle at top, #14203b 0, #050b18 55%);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header and tabs */
+
+.top-bar {
+  padding: 10px 12px 0 12px;
+}
+
+.logo {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.tab {
+  flex: 1;
+  border: none;
+  padding: 4px 0;
+  border-radius: 999px;
+  font-size: 12px;
+  cursor: pointer;
+  background: transparent;
+  color: #a7b4d8;
+}
+
+.tab.active {
+  background: #1b4bff;
+  color: #f5f7ff;
+}
+
+/* Controls */
+
+.controls {
+  padding: 6px 12px 4px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.field-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.input {
+  flex: 1;
+  border-radius: 999px;
+  border: none;
+  padding: 5px 9px;
+  font-size: 12px;
+  background: #050b18;
+  color: #f5f7ff;
+  outline: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.input::placeholder {
+  color: #626c8f;
+}
+
+.primary-btn {
+  border-radius: 999px;
+  border: none;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  background: linear-gradient(135deg, #1b4bff, #23a6ff);
+  color: #f9fbff;
+}
+
+.field-grid {
+  display: grid;
+  grid-template-columns: 1.05fr 1fr 1.1fr;
+  gap: 8px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+}
+
+.label {
+  font-size: 11px;
+  margin-bottom: 3px;
+  color: #9eabcf;
+}
+
+.top-space {
+  margin-top: 8px;
+}
+
+.select {
+  border-radius: 6px;
+  border: none;
+  padding: 4px 6px;
+  font-size: 11px;
+  background: #050b18;
+  color: #f5f7ff;
+  outline: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.select.multi {
+  min-height: 60px;
+}
+
+.check-label {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #9eabcf;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Results */
+
+.results-section {
+  padding: 6px 0 10px 0;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 6px 0 6px;
+}
+
+.empty {
+  margin: 6px 12px;
+  font-size: 12px;
+  color: #7f89aa;
+}
+
+.result-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: rgba(9, 17, 40, 0.92);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.02);
+  cursor: default;
+}
+
+.result-row:hover {
+  background: rgba(19, 33, 70, 0.98);
+}
+
+.result-main {
+  flex: 1;
+}
+
+.title-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  align-items: baseline;
+}
+
+.title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.year-type {
+  font-size: 11px;
+  color: #8e96bc;
+}
+
+.meta-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+  flex-wrap: wrap;
+}
+
+.imdb-badge {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: #f5c518;
+  color: #000;
+  font-weight: 600;
+}
+
+.providers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.provider-tag {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #dfe6ff;
+  white-space: nowrap;
+}
+
+/* Provider colors */
+
+.provider-netflix {
+  border-color: #e50914;
+  color: #ff9da4;
+}
+
+.provider-prime {
+  border-color: #00a8e1;
+  color: #9de1ff;
+}
+
+.provider-hulu {
+  border-color: #1ce783;
+  color: #aaf5cf;
+}
+
+.provider-disney {
+  border-color: #1f80ff;
+  color: #a3c6ff;
+}
+
+.provider-crunchyroll {
+  border-color: #ff8800;
+  color: #ffd39e;
+}
+
+.result-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.btn-icon {
+  border-radius: 999px;
+  border: none;
+  width: 22px;
+  height: 22px;
+  font-size: 13px;
+  cursor: pointer;
+  background: rgba(10, 20, 48, 0.9);
+  color: #f5f7ff;
+}
+
+.btn-icon:hover {
+  background: rgba(31, 75, 255, 0.9);
+}
+
+/* Hover preview */
+
+.preview {
+  position: fixed;
+  right: 8px;
+  bottom: 10px;
+  width: 230px;
+  background: rgba(9, 17, 40, 0.98);
+  border-radius: 10px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  padding: 8px;
+  display: flex;
+  gap: 8px;
+  pointer-events: none; /* so it never blocks clicks */
+  z-index: 9999;
+}
+
+.preview.hidden {
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.preview:not(.hidden) {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.preview-poster {
+  width: 70px;
+  height: 105px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: #11172f;
+}
+
+.preview-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.preview-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.preview-sub {
+  font-size: 11px;
+  color: #9eabcf;
+}
+
+.preview-imdb {
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.preview-providers {
+  margin-top: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}

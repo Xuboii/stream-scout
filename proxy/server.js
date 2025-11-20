@@ -1,3 +1,4 @@
+// server.js
 import express from "express";
 import fetch from "node-fetch";
 import cors from "cors";
@@ -11,45 +12,52 @@ app.use(express.json());
 
 const PORT = 8080;
 
-// Validate keys exist
-if (!process.env.OMDB_API_KEY) console.warn("Missing OMDB_API_KEY!");
-if (!process.env.TMDB_API_KEY) console.warn("Missing TMDB_API_KEY!");
+// Load keys
+const OMDB = process.env.OMDB_API_KEY;
+const TMDB_V4 = process.env.TMDB_V4_TOKEN;
+
+if (!OMDB) console.warn("Missing OMDB_API_KEY!");
+if (!TMDB_V4) console.warn("Missing TMDB_V4_TOKEN!");
+
+const TMDB_HEADERS = {
+  Authorization: `Bearer ${TMDB_V4}`,
+  "Content-Type": "application/json;charset=utf-8"
+};
 
 /* -----------------------------
-    OMDB PROXY
+   OMDB
 ------------------------------ */
 app.get("/omdb", async (req, res) => {
-  const url = `https://www.omdbapi.com/?apikey=${process.env.OMDB_API_KEY}&${new URLSearchParams(req.query)}`;
+  const url =
+    "https://www.omdbapi.com/?" +
+    new URLSearchParams({
+      apikey: OMDB,
+      ...req.query
+    });
 
-  console.log("Proxy request:", url);
+  console.log("OMDb request:", url);
 
   try {
-    const response = await fetch(url);
-    const data = await response.json();
-    res.json(data);
+    const r = await fetch(url);
+    res.json(await r.json());
   } catch (err) {
-    console.error("OMDB error:", err);
-    res.status(500).json({ error: "OMDB request failed" });
+    console.error("OMDb error:", err);
+    res.status(500).json({ error: "OMDb request failed" });
   }
 });
 
 /* -----------------------------
-    TMDB GENRES (movies or tv)
+   TMDB genres
 ------------------------------ */
 app.get("/tmdb_genres", async (req, res) => {
   try {
-    const type = req.query.type;
-    const base = "https://api.themoviedb.org/3/genre";
-    const endpoint =
-      type === "movie"
-        ? `${base}/movie/list?api_key=${process.env.TMDB_API_KEY}&language=en-US`
-        : `${base}/tv/list?api_key=${process.env.TMDB_API_KEY}&language=en-US`;
+    const type = req.query.type === "tv" ? "tv" : "movie";
+    const endpoint = `https://api.themoviedb.org/3/genre/${type}/list?language=en-US`;
 
     console.log("Genre request:", endpoint);
 
-    const tmdbRes = await fetch(endpoint);
-    const json = await tmdbRes.json();
-
+    const r = await fetch(endpoint, { headers: TMDB_HEADERS });
+    const json = await r.json();
     res.json(json.genres || []);
   } catch (err) {
     console.error("Genre error:", err);
@@ -57,91 +65,69 @@ app.get("/tmdb_genres", async (req, res) => {
   }
 });
 
-
 /* -----------------------------
-    TMDB DISCOVER (for search)
+   TMDB search
 ------------------------------ */
 app.get("/tmdb_search", async (req, res) => {
-  const searchType = req.query.type === "movie" ? "movie" : "tv";
-
-  const url =
-    `https://api.themoviedb.org/3/discover/${searchType}?` +
-    new URLSearchParams({
-      api_key: process.env.TMDB_API_KEY,
-      language: "en-US",
-      sort_by: "popularity.desc",
-      include_adult: "false",
-      include_video: "false",
-      page: req.query.page || "1",
-      with_genres: req.query.with_genres || "",
-      with_watch_providers: req.query.providers || "",
-      watch_region: "US",
-    });
-
-  console.log("TMDB search request:", url);
-
   try {
-    const response = await fetch(url);
-    const data = await response.json();
-    res.json(data);
+    const type = req.query.type === "tv" ? "tv" : "movie";
+
+    const url = new URL(`https://api.themoviedb.org/3/search/${type}`);
+    url.searchParams.set("query", req.query.query || "");
+    url.searchParams.set("language", "en-US");
+    url.searchParams.set("include_adult", "false");
+    url.searchParams.set("page", req.query.page || "1");
+
+    console.log("TMDB search request:", url.toString());
+
+    const r = await fetch(url.toString(), { headers: TMDB_HEADERS });
+    res.json(await r.json());
   } catch (err) {
     console.error("TMDB search error:", err);
     res.status(500).json({ error: "TMDB search failed" });
   }
 });
 
-/* ----------------------------------------
-    TMDB EXTERNAL IDS
------------------------------------------ */
+/* -----------------------------
+   TMDB external IDs
+------------------------------ */
 app.get("/tmdb_external_ids", async (req, res) => {
   try {
-    const type = req.query.type === "movie" ? "movie" : "tv";
+    const type = req.query.type === "tv" ? "tv" : "movie";
     const id = req.query.id;
 
-    if (!id) return res.status(400).json({ error: "Missing id" });
+    const url = `https://api.themoviedb.org/3/${type}/${id}/external_ids`;
 
-    const url = `https://api.themoviedb.org/3/${type}/${id}/external_ids?api_key=${process.env.TMDB_API_KEY}`;
+    console.log("TMDB external_ids request:", url);
 
-    console.log("External IDs request:", url);
-
-    const tmdbRes = await fetch(url);
-    const json = await tmdbRes.json();
-
-    res.json(json);
+    const r = await fetch(url, { headers: TMDB_HEADERS });
+    res.json(await r.json());
   } catch (err) {
-    console.error("External IDs error:", err);
-    res.status(500).json({ error: "external_ids failed" });
+    console.error("TMDB external_ids error:", err);
+    res.status(500).json({ error: "TMDB external_ids failed" });
   }
 });
-
-/* ----------------------------------------
-    TMDB WATCH PROVIDERS
------------------------------------------ */
-app.get("/tmdb_providers", async (req, res) => {
-  try {
-    const type = req.query.type === "movie" ? "movie" : "tv";
-    const id = req.query.id;
-
-    if (!id) return res.status(400).json({ error: "Missing id" });
-
-    const url = `https://api.themoviedb.org/3/${type}/${id}/watch/providers?api_key=${process.env.TMDB_API_KEY}`;
-
-    console.log("Providers request:", url);
-
-    const tmdbRes = await fetch(url);
-    const json = await tmdbRes.json();
-
-    res.json(json);
-  } catch (err) {
-    console.error("Provider error:", err);
-    res.status(500).json({ error: "providers failed" });
-  }
-});
-
 
 /* -----------------------------
-    START SERVER
+   TMDB watch providers
 ------------------------------ */
+app.get("/tmdb_providers", async (req, res) => {
+  try {
+    const type = req.query.type === "tv" ? "tv" : "movie";
+    const id = req.query.id;
+
+    const url = `https://api.themoviedb.org/3/${type}/${id}/watch/providers`;
+
+    console.log("TMDB providers request:", url);
+
+    const r = await fetch(url, { headers: TMDB_HEADERS });
+    res.json(await r.json());
+  } catch (err) {
+    console.error("TMDB providers error:", err);
+    res.status(500).json({ error: "TMDB providers failed" });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Stream Scout Proxy running at http://localhost:${PORT}`);
 });

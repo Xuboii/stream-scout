@@ -1,19 +1,20 @@
-// Basic constants
+// popup.js
+
 const TMDB_IMG = "https://image.tmdb.org/t/p/w185";
 const COUNTRY = "US";
 const PROXY_URL = "http://localhost:8080";
 
-// Shared state
 const state = {
-  tab: "search", // "search" | "watchlist" | "watched"
-  type: "movie", // "movie" | "tv"
+  tab: "search",
+  type: "movie",
   q: "",
   genres: [],
   selectedGenres: new Set(),
   onlyAvail: false,
+  minRating: 0,
+  providerFilter: new Set(),
 };
 
-// DOM references
 const elControls = document.getElementById("controls");
 const elQ = document.getElementById("q");
 const elType = document.getElementById("type");
@@ -26,8 +27,12 @@ const tplRow = document.getElementById("row-tpl");
 const btnTabSearch = document.getElementById("tabSearch");
 const btnTabWatchlist = document.getElementById("tabWatchlist");
 const btnTabWatched = document.getElementById("tabWatched");
+const btnSearch = document.getElementById("btnSearch");
 
-// Hover preview elements
+const elMinRating = document.getElementById("minRating");
+const elProviderFilter = document.getElementById("providerFilter");
+
+// Hover preview
 const previewEl = document.getElementById("hoverPreview");
 const previewPoster = document.getElementById("previewPoster");
 const previewTitle = document.getElementById("previewTitle");
@@ -38,20 +43,8 @@ const previewProviders = document.getElementById("previewProviders");
 let hidePreviewTimer = null;
 let currentItems = [];
 
-// ---------------------------------------------------------
-// Small utilities
-// ---------------------------------------------------------
+// storage helpers
 
-// Debounce helper
-const debounce = (fn, ms = 300) => {
-  let t;
-  return (...args) => {
-    clearTimeout(t);
-    t = setTimeout(() => fn(...args), ms);
-  };
-};
-
-// Storage helpers
 const loadList = async (key) =>
   (await chrome.storage.sync.get([key]))[key] || [];
 
@@ -72,20 +65,21 @@ const removeFrom = async (key, tmdbKey) => {
   await saveList(key, next);
 };
 
-// Proxy GET helper that forwards query to TMDB or OMDb
+// proxy helper
+
 async function pget(path, params = {}) {
   const url = new URL(PROXY_URL + path);
-  Object.entries(params).forEach(([k, v]) =>
-    url.searchParams.set(k, v)
-  );
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== "") {
+      url.searchParams.set(k, v);
+    }
+  });
   const res = await fetch(url.toString());
   if (!res.ok) throw new Error("HTTP " + res.status);
   return res.json();
 }
 
-// ---------------------------------------------------------
-// Genres
-// ---------------------------------------------------------
+// genres
 
 async function loadGenres() {
   const data = await pget("/tmdb_genres", { type: state.type });
@@ -104,36 +98,36 @@ function renderGenreOptions() {
   });
 }
 
-// ---------------------------------------------------------
-// Search TMDB, enrich with OMDb and provider info
-// ---------------------------------------------------------
+// main search
 
-const doSearch = debounce(async () => {
+async function doSearch() {
   if (state.tab !== "search") return;
 
   const query = (state.q || "").trim();
   if (!query) {
-    renderResults([]);
+    elEmpty.style.display = "block";
+    elEmpty.textContent =
+      "Start typing a title and press Search, or open your Watchlist.";
+    elResults.innerHTML = "";
     return;
   }
 
-  const endpoint = "/tmdb_search";
+  elEmpty.style.display = "block";
+  elEmpty.textContent = "Searching...";
+  elResults.innerHTML = "";
 
-  const genreIds = [...state.selectedGenres].join(",");
-
-  const tmdb = await pget(endpoint, {
+  const tmdb = await pget("/tmdb_search", {
     type: state.type,
     query,
-    include_adult: "false",
-    language: "en-US",
     page: "1",
-    with_genres: genreIds,
   });
 
+  const wantedGenres = new Set(state.selectedGenres);
+
   let results = (tmdb.results || []).filter((r) => {
-    if (!genreIds) return true;
-    const want = new Set([...state.selectedGenres]);
-    return (r.genre_ids || []).some((id) => want.has(id));
+    if (!wantedGenres.size) return true;
+    const ids = r.genre_ids || [];
+    return ids.some((id) => wantedGenres.has(id));
   });
 
   results = results.slice(0, 12);
@@ -141,45 +135,32 @@ const doSearch = debounce(async () => {
   const items = await Promise.all(
     results.map(async (r) => {
       const tmdbId = r.id;
+
       const title =
         state.type === "movie"
           ? r.title || r.original_title
           : r.name || r.original_name;
-      const year = (r.release_date || r.first_air_date || "").slice(
-        0,
-        4,
-      );
 
-      // external_ids to get imdb_id
-      const ext = await pget("/tmdb_external_ids", {
-        type: state.type,
-        id: tmdbId
-      });
+      const year = (r.release_date || r.first_air_date || "").slice(0, 4);
+
+      const [ext, prov] = await Promise.all([
+        pget("/tmdb_external_ids", { type: state.type, id: tmdbId }),
+        pget("/tmdb_providers", { type: state.type, id: tmdbId }),
+      ]);
+
       const imdbId = ext.imdb_id || null;
 
-      // imdb rating via OMDb
       let imdbRating = null;
       if (imdbId) {
         try {
-          const omdb = await pget("/omdb/", { i: imdbId });
-          if (
-            omdb &&
-            omdb.imdbRating &&
-            omdb.imdbRating !== "N/A"
-          ) {
+          const omdb = await pget("/omdb", { i: imdbId });
+          if (omdb && omdb.imdbRating && omdb.imdbRating !== "N/A") {
             imdbRating = omdb.imdbRating;
           }
         } catch (err) {
           console.warn("OMDb lookup failed for", imdbId, err);
-          imdbRating = null;
         }
       }
-
-      // providers via TMDB
-      const prov = await pget("/tmdb_providers", {
-        type: state.type,
-        id: tmdbId
-      });
 
       const us = (prov.results && prov.results[COUNTRY]) || {};
       const offers = [
@@ -189,7 +170,28 @@ const doSearch = debounce(async () => {
         ...(us.buy || []),
       ];
 
-      if (state.onlyAvail && offers.length === 0) return null;
+      const providers = offers.map((o) => o.provider_name);
+
+      if (state.onlyAvail && providers.length === 0) {
+        return null;
+      }
+
+      if (state.minRating && imdbRating) {
+        if (Number(imdbRating) < state.minRating) {
+          return null;
+        }
+      }
+
+      if (state.providerFilter.size > 0) {
+        const hasWanted = providers.some((p) => {
+          const low = p.toLowerCase();
+          for (const want of state.providerFilter) {
+            if (low.includes(want.toLowerCase())) return true;
+          }
+          return false;
+        });
+        if (!hasWanted) return null;
+      }
 
       return {
         key: `${state.type}:${tmdbId}`,
@@ -200,17 +202,15 @@ const doSearch = debounce(async () => {
         poster: r.poster_path ? TMDB_IMG + r.poster_path : "",
         imdbId,
         imdbRating,
-        providers: offers.map((o) => o.provider_name),
+        providers,
       };
-    }),
+    })
   );
 
   renderResults(items.filter(Boolean));
-}, 350);
+}
 
-// ---------------------------------------------------------
-// Rendering - rows and hover preview
-// ---------------------------------------------------------
+// provider tag helpers
 
 function providerClass(name) {
   const n = name.toLowerCase();
@@ -242,6 +242,8 @@ function renderProviderTags(container, providers) {
   });
 }
 
+// render results
+
 function renderResults(items) {
   currentItems = items;
   elResults.innerHTML = "";
@@ -263,9 +265,7 @@ function renderResults(items) {
     const labelType = item.type === "movie" ? "Movie" : "TV";
 
     node.querySelector(".title").textContent = item.title;
-    node.querySelector(
-      ".year-type",
-    ).textContent = item.year
+    node.querySelector(".year-type").textContent = item.year
       ? `${labelType} · ${item.year}`
       : labelType;
 
@@ -273,10 +273,7 @@ function renderResults(items) {
       ? `IMDb ${item.imdbRating}`
       : "IMDb N/A";
 
-    renderProviderTags(
-      node.querySelector(".providers"),
-      item.providers,
-    );
+    renderProviderTags(node.querySelector(".providers"), item.providers);
 
     const btnWatchlist = node.querySelector(".btn-watchlist");
     const btnWatched = node.querySelector(".btn-watched");
@@ -301,7 +298,7 @@ function renderResults(items) {
   });
 }
 
-// Hover preview
+// hover preview
 
 function showPreview(item) {
   if (hidePreviewTimer) {
@@ -323,7 +320,7 @@ function showPreview(item) {
     : labelType;
 
   previewImdb.textContent = item.imdbRating
-    ? `IMDb rating - ${item.imdbRating}`
+    ? `IMDb rating • ${item.imdbRating}`
     : "IMDb rating not available";
 
   previewProviders.innerHTML = "";
@@ -339,18 +336,10 @@ function scheduleHidePreview() {
   }, 140);
 }
 
-// Optional - if the user moves into the preview box, keep it visible
-previewEl.addEventListener("mouseenter", () => {
-  if (hidePreviewTimer) {
-    clearTimeout(hidePreviewTimer);
-    hidePreviewTimer = null;
-  }
-});
+// pointer events are disabled in CSS so we only manage visibility here
 previewEl.addEventListener("mouseleave", scheduleHidePreview);
 
-// ---------------------------------------------------------
-// Tabs and input wiring
-// ---------------------------------------------------------
+// tabs and events
 
 function setTab(tab) {
   state.tab = tab;
@@ -359,11 +348,18 @@ function setTab(tab) {
   btnTabWatchlist.classList.toggle("active", tab === "watchlist");
   btnTabWatched.classList.toggle("active", tab === "watched");
 
-  // Hide search controls on non search tabs
   elControls.style.display = tab === "search" ? "block" : "none";
 
   if (tab === "search") {
-    doSearch();
+    // show last search results if any
+    if (currentItems.length) {
+      renderResults(currentItems);
+    } else {
+      elResults.innerHTML = "";
+      elEmpty.style.display = "block";
+      elEmpty.textContent =
+        "Start typing a title and press Search, or open your Watchlist.";
+    }
   } else if (tab === "watchlist") {
     loadList("watchlist").then((items) => {
       renderResults(items);
@@ -381,6 +377,9 @@ btnTabWatched.addEventListener("click", () => setTab("watched"));
 
 elQ.addEventListener("input", (e) => {
   state.q = e.target.value;
+});
+
+btnSearch.addEventListener("click", () => {
   doSearch();
 });
 
@@ -393,19 +392,25 @@ elType.addEventListener("change", async (e) => {
 
 elGenre.addEventListener("change", (e) => {
   state.selectedGenres = new Set(
-    [...e.target.selectedOptions].map((o) => Number(o.value)),
+    [...e.target.selectedOptions].map((o) => Number(o.value))
   );
-  doSearch();
 });
 
 elOnlyAvail.addEventListener("change", (e) => {
   state.onlyAvail = e.target.checked;
-  doSearch();
 });
 
-// ---------------------------------------------------------
-// Init
-// ---------------------------------------------------------
+elMinRating.addEventListener("change", (e) => {
+  state.minRating = Number(e.target.value || 0);
+});
+
+elProviderFilter.addEventListener("change", (e) => {
+  state.providerFilter = new Set(
+    [...e.target.selectedOptions].map((o) => o.value)
+  );
+});
+
+// init
 
 (async () => {
   await loadGenres();
