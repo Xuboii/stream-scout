@@ -62,6 +62,29 @@ body {
   gap: 10px;
 }
 
+/* Centered title layout */
+.sp-title-centered {
+  text-align: center;
+  width: 100%;
+  font-size: 17px;
+  font-weight: 700;
+  margin: 0;
+}
+
+/* Container for the badge under the title */
+.sp-detect-container {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+/* Subtitle spacing improvement after moving badge */
+.sp-subtitle {
+  margin-top: 6px;
+  text-align: center;
+}
+
 /* Sections */
 
 .sp-section {
@@ -472,5 +495,4 @@ body {
 .sp-collapse-btn:hover {
   background: #1a2640;
 }
-
 
