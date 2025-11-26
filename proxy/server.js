@@ -130,18 +130,140 @@ app.get("/tmdb_providers", async (req, res) => {
 
 app.post("/ai_recommend", async (req, res) => {
   try {
-    const body = req.body; // { title, year, type, mood, ... }
+    const { title, year, type, mood } = req.body;
 
-    // Call OpenAI or your model here using body.title etc
-    // Then map to a structure like:
-    // { items: [{ key, title, year, type, imdbRating, providers }] }
+    const userMood = mood?.trim() || "";
+    const queryText = userMood
+      ? `${title} (${year}). Mood or preference: ${userMood}.`
+      : `${title} (${year})`;
 
-    res.json({ items: [] }); // placeholder
+    const prompt = `
+You are a movie expert. Suggest exactly 10 real ${type === "tv" ? "TV shows" : "movies"} similar to: 
+"${title}" (${year}). Consider tone, pacing, theme, genre, and audience.
+
+Mood or user preference: "${userMood}"
+
+Return ONLY a strict JSON array, with no backticks, no code fences, no explanation. Like this:
+[
+  { "title": "Example", "year": "2014", "type": "movie", "imdbId": "tt1375666" }
+]
+`;
+
+    const r = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: 800
+      })
+    });
+
+    const data = await r.json();
+    if (!data.choices || !data.choices.length) {
+      return res.json({ items: [] });
+    }
+
+    // CLEAN AI OUTPUT
+    let text = data.choices[0].message.content.trim();
+
+    text = text
+      .replace(/```json/gi, "")
+      .replace(/```/g, "")
+      .replace(/^\s*json/i, "")
+      .trim();
+
+    let parsed;
+    try {
+      parsed = JSON.parse(text);
+    } catch (err) {
+      console.error("Cleaned AI text:", text);
+      console.error("Parse error:", err);
+      return res.json({ items: [] });
+    }
+
+    // Prevent hallucinations
+    if (!Array.isArray(parsed)) {
+      return res.json({ items: [] });
+    }
+
+    // Convert results into full StreamScout format
+    const finalItems = [];
+
+    for (const entry of parsed) {
+      if (!entry.imdbId) continue;
+
+      const omdbURL =
+        "https://www.omdbapi.com/?" +
+        new URLSearchParams({
+          apikey: OMDB,
+          i: entry.imdbId
+        });
+
+      const omdb = await fetch(omdbURL).then((r) => r.json());
+      if (!omdb || omdb.Response === "False") continue;
+
+      const tmdbType = omdb.Type === "series" ? "tv" : "movie";
+
+      const searchURL = new URL(
+        `https://api.themoviedb.org/3/search/${tmdbType}`
+      );
+      searchURL.searchParams.set("query", omdb.Title);
+      searchURL.searchParams.set("language", "en-US");
+      searchURL.searchParams.set("include_adult", "false");
+      searchURL.searchParams.set("page", "1");
+
+      const tmdbSearch = await fetch(searchURL, {
+        headers: TMDB_HEADERS
+      }).then((r) => r.json());
+
+      const match = tmdbSearch.results?.[0];
+      if (!match) continue;
+
+      const tmdbId = match.id;
+
+      // Providers
+      let providers = [];
+      try {
+        const provURL = `https://api.themoviedb.org/3/${tmdbType}/${tmdbId}/watch/providers`;
+        const prov = await fetch(provURL, {
+          headers: TMDB_HEADERS
+        }).then((r) => r.json());
+        const us = prov.results?.US || {};
+        const offers = [
+          ...(us.flatrate || []),
+          ...(us.ads || []),
+          ...(us.rent || []),
+          ...(us.buy || [])
+        ];
+        providers = offers.map((o) => o.provider_name);
+      } catch {}
+
+      finalItems.push({
+        key: `${tmdbType}:${tmdbId}`,
+        tmdbId,
+        imdbId: entry.imdbId,
+        title: omdb.Title,
+        year: omdb.Year?.slice(0, 4) || "",
+        type: tmdbType,
+        imdbRating:
+          omdb.imdbRating && omdb.imdbRating !== "N/A"
+            ? omdb.imdbRating
+            : null,
+        providers
+      });
+    }
+
+    return res.json({ items: finalItems });
   } catch (err) {
     console.error("ai_recommend error", err);
     res.status(500).json({ error: "AI recommend failed" });
   }
 });
+
 
 
 app.listen(PORT, () => {
