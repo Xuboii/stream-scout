@@ -2,6 +2,7 @@
 
 let ssPanelRoot = null;
 let ssPanelOpen = false;
+let ssPanelCollapsed = false;
 
 function ensurePanel() {
   if (ssPanelRoot) return ssPanelRoot;
@@ -10,7 +11,6 @@ function ensurePanel() {
   panel.id = "ss-fallback-panel";
   panel.className = "ss-fallback-panel";
 
-  // Inner frame container
   const frameWrap = document.createElement("div");
   frameWrap.className = "ss-panel-frame-wrap";
 
@@ -20,7 +20,6 @@ function ensurePanel() {
 
   frameWrap.appendChild(iframe);
 
-  // Close button
   const closeBtn = document.createElement("button");
   closeBtn.className = "ss-panel-close";
   closeBtn.title = "Close Stream Scout";
@@ -53,19 +52,58 @@ function togglePanel(forceState) {
   }
 }
 
-// Listen for messages from the background script
+function toggleCollapse() {
+  const panel = ensurePanel();
+  ssPanelCollapsed = !ssPanelCollapsed;
+
+  if (ssPanelCollapsed) {
+    panel.classList.add("collapsed");
+  } else {
+    panel.classList.remove("collapsed");
+  }
+}
+
+// Receive messages from the sidepanel iframe
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-  if (msg && msg.type === "STREAM_SCOUT_TOGGLE_PANEL") {
-    togglePanel(true); // always open on page load
+  if (msg && msg.action === "STREAM_SCOUT_COLLAPSE_TOGGLE") {
+    toggleCollapse();
     sendResponse({ ok: true });
     return true;
   }
+
+  if (msg && msg.type === "STREAM_SCOUT_TOGGLE_PANEL") {
+    togglePanel(true);
+    sendResponse({ ok: true });
+    return true;
+  }
+
   return false;
 });
 
-// Optional: keyboard shortcut to toggle panel manually (Ctrl+Shift+S)
+// Keyboard shortcut (optional)
 document.addEventListener("keydown", (e) => {
   if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "s") {
     togglePanel();
   }
 });
+
+// Handle clicks on the collapsed arrow
+document.addEventListener("click", (e) => {
+  const panel = ssPanelRoot;
+  if (!panel) return;
+
+  if (panel.classList.contains("collapsed")) {
+    const rect = panel.getBoundingClientRect();
+
+    // Click within the arrow area
+    if (
+      e.clientX >= rect.left - 40 &&
+      e.clientX <= rect.left &&
+      e.clientY >= rect.top &&
+      e.clientY <= rect.bottom
+    ) {
+      toggleCollapse(); // expand again
+    }
+  }
+});
+

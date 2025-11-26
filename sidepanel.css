@@ -444,3 +444,33 @@ body {
   background: #111827;
   border-radius: 999px;
 }
+
+/* ===== Collapsible Panel ===== */
+
+/* Collapse tab that matches the fallback expand tab */
+.sp-collapse-btn {
+  position: absolute;
+  top: 50%;
+  left: -8px; /* small protrusion like fallback tab */
+  transform: translateY(-50%);
+
+  width: 10px;
+  height: 46px;
+
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  border-right: none;
+  border-radius: 8px 0 0 8px;
+
+  cursor: pointer;
+  pointer-events: auto;
+  z-index: 9999;
+
+  transition: background 0.15s ease;
+}
+
+.sp-collapse-btn:hover {
+  background: #1a2640;
+}
+
+

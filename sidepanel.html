@@ -6,56 +6,59 @@
     <link rel="stylesheet" href="sidepanel.css" />
   </head>
   <body>
-    <div id="app" class="sp-root">
-      <header class="sp-header">
-        <div class="sp-title-block">
-          <h1 class="sp-title">Stream Scout</h1>
-          <span id="contextBadge" class="sp-context-badge">
-            Detecting page...
-          </span>
-        </div>
-        <p id="contextSubtitle" class="sp-subtitle">
-          Open an IMDb title page to see details and AI suggestions.
-        </p>
-      </header>
-
-      <main class="sp-main">
-        <!-- Context card for the title on the current page -->
-        <section class="sp-section">
-          <h2 class="sp-section-title">On this page</h2>
-          <div id="contextCard" class="context-card context-card-empty">
-            <p class="context-empty-text">
-              No supported title detected yet.
-            </p>
+    <div id="sp-collapsible" class="sp-collapsible expanded">
+      <button id="sp-collapse-btn" class="sp-collapse-btn"></button>
+      <div id="app" class="sp-root">
+        <header class="sp-header">
+          <div class="sp-title-block">
+            <h1 class="sp-title">Stream Scout</h1>
+            <span id="contextBadge" class="sp-context-badge">
+              Detecting page...
+            </span>
           </div>
-        </section>
+          <p id="contextSubtitle" class="sp-subtitle">
+            Open an IMDb title page to see details and AI suggestions.
+          </p>
+        </header>
 
-        <!-- AI suggestions based on current title -->
-        <section class="sp-section">
-          <div class="sp-section-header">
-            <h2 class="sp-section-title">AI suggestions</h2>
-            <span id="aiStatus" class="sp-ai-status"></span>
-          </div>
+        <main class="sp-main">
+          <!-- Context card for the title on the current page -->
+          <section class="sp-section">
+            <h2 class="sp-section-title">On this page</h2>
+            <div id="contextCard" class="context-card context-card-empty">
+              <p class="context-empty-text">
+                No supported title detected yet.
+              </p>
+            </div>
+          </section>
 
-          <div class="ai-controls">
-            <textarea
-              id="aiPrompt"
-              class="ai-input"
-              rows="2"
-              placeholder="Tell AI what you are in the mood for (optional)"
-            ></textarea>
-            <button id="btnAskAi" class="btn primary full-width">
-              🎬 Ask AI for similar picks
-            </button>
-          </div>
+          <!-- AI suggestions based on current title -->
+          <section class="sp-section">
+            <div class="sp-section-header">
+              <h2 class="sp-section-title">AI suggestions</h2>
+              <span id="aiStatus" class="sp-ai-status"></span>
+            </div>
 
-          <div id="aiEmpty" class="sp-empty-msg">
-            AI will suggest movies or shows based on the title on this page.
-          </div>
+            <div class="ai-controls">
+              <textarea
+                id="aiPrompt"
+                class="ai-input"
+                rows="2"
+                placeholder="Tell AI what you are in the mood for (optional)"
+              ></textarea>
+              <button id="btnAskAi" class="btn primary full-width">
+                🎬 Ask AI for similar picks
+              </button>
+            </div>
 
-          <div id="aiResults" class="ai-results"></div>
-        </section>
-      </main>
+            <div id="aiEmpty" class="sp-empty-msg">
+              AI will suggest movies or shows based on the title on this page.
+            </div>
+
+            <div id="aiResults" class="ai-results"></div>
+          </section>
+        </main>
+      </div>
     </div>
 
     <template id="provider-pill-tpl">
@@ -96,7 +99,6 @@
         </div>
       </article>
     </template>
-
     <script type="module" src="sidepanel.js"></script>
   </body>
 </html>

@@ -75,3 +75,43 @@
   height: 100%;
   border: none;
 }
+
+/* Collapsed panel slides off screen */
+#ss-fallback-panel.collapsed {
+  transform: translateX(100%);
+}
+
+/* Arrow tab visible for expanding */
+#ss-fallback-panel.collapsed::after {
+  content: "❮";
+  position: absolute;
+  top: 50%;
+  left: -26px;
+
+  transform: translateY(-50%);
+  width: 26px;
+  height: 46px;
+
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  border-right: none;
+  border-radius: 8px 0 0 8px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 18px;
+  font-weight: bold;
+  color: #dbeafe;
+
+  cursor: pointer;
+  z-index: 9999999;
+  pointer-events: auto;
+}
+
+/* Make arrow clickable to reopen */
+#ss-fallback-panel.collapsed::after:hover {
+  background: #1e293b;
+
+}

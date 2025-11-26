@@ -79,6 +79,18 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   }
 });
 
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (msg.action === "STREAM_SCOUT_COLLAPSE_TOGGLE") {
+    // Relay message to the active tab so fallback-panel.js can respond
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (!tabs.length) return;
+      chrome.tabs.sendMessage(tabs[0].id, msg);
+    });
+    sendResponse({ ok: true });
+    return true;
+  }
+});
+
 // Simple cache idea for providers or genres (extend as needed)
 const cache = new Map();
 async function cachedJson(key, fetcher, ttlMs = 3600_000) {

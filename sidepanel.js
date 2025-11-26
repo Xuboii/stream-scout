@@ -452,6 +452,15 @@ async function askAiForSuggestions() {
   }
 }
 
+// --- Collapsible panel ---
+const collapseBtn = document.getElementById("sp-collapse-btn");
+
+collapseBtn.addEventListener("click", () => {
+  collapseBtn.textContent = "❭"; // always right arrow in iframe
+  chrome.runtime.sendMessage({ action: "STREAM_SCOUT_COLLAPSE_TOGGLE" });
+});
+
+
 // Events
 
 btnAskAi.addEventListener("click", () => {
