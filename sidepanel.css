@@ -7,6 +7,11 @@ body {
   background: #020617;
   color: #e5e7eb;
 }
+
+.context-actions .btn-icon {
+  margin-right: 4px;
+}
+
 .context-title-link {
   color: #f9fafb;
   text-decoration: none;

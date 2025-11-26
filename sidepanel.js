@@ -213,33 +213,45 @@ function renderContextCard() {
   contextCardEl.classList.remove("context-card-empty");
   contextCardEl.innerHTML = "";
 
-  const root = document.createElement("div");
+  // === Outer card ===
+  const card = document.createElement("article");
+  card.className = "suggest-card"; // identical style to AI cards
 
+  // === Left column (suggest-main) ===
+  const main = document.createElement("div");
+  main.className = "suggest-main";
+
+  // HEADER
   const header = document.createElement("div");
-  header.className = "context-header";
+  header.className = "suggest-header";
 
   const titleBlock = document.createElement("div");
-  titleBlock.className = "context-title-block";
+  titleBlock.className = "suggest-title-block";
 
-  const titleEl = document.createElement("a");
-  titleEl.className = "context-title context-title-link";
-  titleEl.href = `https://www.imdb.com/title/${item.imdbId}/`;
-  titleEl.target = "_blank";
-  titleEl.rel = "noopener noreferrer";
-  titleEl.textContent = item.title;
+  // TITLE LINK
+  const titleLink = document.createElement("a");
+  titleLink.className = "s-title-link";
+  titleLink.href = `https://www.imdb.com/title/${item.imdbId}/`;
+  titleLink.target = "_blank";
+  titleLink.rel = "noopener noreferrer";
 
+  const titleSpan = document.createElement("span");
+  titleSpan.className = "s-title";
+  titleSpan.textContent = item.title;
 
-  const metaEl = document.createElement("div");
-  metaEl.className = "context-meta";
+  titleLink.appendChild(titleSpan);
+
+  // META
+  const meta = document.createElement("span");
+  meta.className = "s-meta";
 
   const typeLabel = item.type === "movie" ? "Movie" : "TV";
-  metaEl.textContent = item.year
-    ? `${typeLabel} • ${item.year}`
-    : typeLabel;
+  meta.textContent = item.year ? `${typeLabel} • ${item.year}` : typeLabel;
 
-  titleBlock.appendChild(titleEl);
-  titleBlock.appendChild(metaEl);
+  titleBlock.appendChild(titleLink);
+  titleBlock.appendChild(meta);
 
+  // IMDb PILL
   const imdbPill = document.createElement("span");
   imdbPill.className = "imdb-pill";
   imdbPill.innerHTML = `
@@ -250,53 +262,63 @@ function renderContextCard() {
   header.appendChild(titleBlock);
   header.appendChild(imdbPill);
 
-  // Status row
-  const statusRow = document.createElement("div");
-  statusRow.className = "context-status-row";
+  // PROVIDERS
+  const providersWrap = document.createElement("div");
+  providersWrap.className = "suggest-providers";
 
-  const inWatchlist = state.watchKeys.has(item.key);
-  const inWatched = state.watchedKeys.has(item.key);
+  const providerLabel = document.createElement("span");
+  providerLabel.className = "providers-label";
+  providerLabel.textContent = "Available on";
 
-  const pill = document.createElement("span");
-  pill.className = "context-status-pill";
+  const providerContainer = document.createElement("div");
+  providerContainer.className = "providers";
 
-  if (inWatched) {
-    pill.textContent = "Already in your Watched list";
-  } else if (inWatchlist) {
-    pill.textContent = "Already in your Watchlist";
-  } else {
-    pill.textContent = "Not in your lists yet";
-  }
-  statusRow.appendChild(pill);
+  providersWrap.appendChild(providerLabel);
+  providersWrap.appendChild(providerContainer);
 
-  // Actions
+  renderProviderTags(providerContainer, item.providers);
+
+  // Append header + providers into left side
+  main.appendChild(header);
+  main.appendChild(providersWrap);
+
+  // === Right column (actions) ===
   const actions = document.createElement("div");
-  actions.className = "context-actions";
+  actions.className = "suggest-actions";
 
   const btnWatchlist = document.createElement("button");
-  btnWatchlist.className = "btn subtle";
-  btnWatchlist.textContent = inWatchlist ? "In watchlist" : "Add to watchlist";
-  if (inWatchlist || inWatched) {
-    btnWatchlist.classList.add("active");
-  }
+  btnWatchlist.className = "btn-icon btn-watchlist";
+  btnWatchlist.title = "Add to watchlist";
+  btnWatchlist.innerHTML = "☆";
 
   const btnWatched = document.createElement("button");
-  btnWatched.className = "btn subtle";
-  btnWatched.textContent = inWatched ? "Already watched" : "Mark as watched";
+  btnWatched.className = "btn-icon btn-watched";
+  btnWatched.title = "Mark as watched";
+  btnWatched.innerHTML = "✓";
+
+  // Membership state
+  const inWatchlist = state.watchKeys.has(item.key);
+  const inWatched = state.watchedKeys.has(item.key);
 
   if (inWatched) {
     btnWatched.classList.add("active");
     btnWatched.disabled = true;
+    btnWatchlist.disabled = true;
+  } else if (inWatchlist) {
+    btnWatchlist.classList.add("active");
   }
 
-  btnWatchlist.addEventListener("click", async () => {
-    if (inWatched) return; // nothing to do
+  // Button handlers
+  btnWatchlist.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    if (inWatched) return;
     await addTo("watchlist", item);
     await updateMembershipSets();
     renderContextCard();
   });
 
-  btnWatched.addEventListener("click", async () => {
+  btnWatched.addEventListener("click", async (e) => {
+    e.stopPropagation();
     if (inWatched) return;
     await addTo("watched", item);
     await removeFrom("watchlist", item.key);
@@ -307,29 +329,14 @@ function renderContextCard() {
   actions.appendChild(btnWatchlist);
   actions.appendChild(btnWatched);
 
-  // Providers
-  const providersBlock = document.createElement("div");
-  providersBlock.className = "context-providers";
+  // === Assemble card ===
+  card.appendChild(main);
+  card.appendChild(actions);
 
-  const label = document.createElement("span");
-  label.className = "context-label";
-  label.textContent = "Available on";
-
-  const providersContainer = document.createElement("div");
-  providersContainer.className = "providers";
-
-  providersBlock.appendChild(label);
-  providersBlock.appendChild(providersContainer);
-
-  renderProviderTags(providersContainer, item.providers);
-
-  root.appendChild(header);
-  root.appendChild(statusRow);
-  root.appendChild(actions);
-  root.appendChild(providersBlock);
-
-  contextCardEl.appendChild(root);
+  // Insert final card
+  contextCardEl.appendChild(card);
 }
+
 
 // AI suggestions
 
