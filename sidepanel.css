@@ -78,6 +78,9 @@ body {
 }
 
 .sp-main {
+  padding-right: 14px;
+  box-sizing: border-box;
+  scrollbar-gutter: stable both-edges;
   flex: 1;
   overflow-y: auto;
   padding-top: 4px;
@@ -574,13 +577,22 @@ body {
 /* Scrollbar */
 
 .sp-main::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
+}
+
+.sp-main::-webkit-scrollbar-track {
+  background: #0a1224; /* dark navy, visible but subtle */
 }
 
 .sp-main::-webkit-scrollbar-thumb {
-  background: #111827;
-  border-radius: 999px;
+  background: #1e293b;  /* lighter navy so it shows */
+  border-radius: 8px;
 }
+
+.sp-main::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
 
 /* ===== Collapsible Panel ===== */
 
@@ -610,3 +622,8 @@ body {
   background: #1a2640;
 }
 
+.sp-section,
+.context-card,
+.suggest-card {
+  margin-right: 4px; /* small breathing room */
+}
