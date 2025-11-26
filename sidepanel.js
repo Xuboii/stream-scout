@@ -342,9 +342,24 @@ function renderContextCard() {
 
 function setAiLoading(loading) {
   state.aiLoading = loading;
-  btnAskAi.disabled = loading || !state.currentItem;
-  aiStatusEl.textContent = loading ? "Thinking..." : "";
+
+  const loadingBox = document.getElementById("aiStatus");
+
+  if (loading) {
+    btnAskAi.disabled = true;
+    btnAskAi.classList.add("loading");
+    btnAskAi.textContent = "Searching...";
+
+    loadingBox.classList.remove("hidden");
+  } else {
+    btnAskAi.disabled = !state.currentItem;
+    btnAskAi.classList.remove("loading");
+    btnAskAi.textContent = "🎬 Ask AI for similar picks";
+
+    loadingBox.classList.add("hidden");
+  }
 }
+
 
 function renderAiResults() {
   aiResultsEl.innerHTML = "";
@@ -419,6 +434,8 @@ async function askAiForSuggestions() {
   }
 
   setAiLoading(true);
+  aiResultsEl.innerHTML = "";  
+  aiEmptyEl.style.display = "none";
   aiStatusEl.textContent = "";
 
   const payload = {

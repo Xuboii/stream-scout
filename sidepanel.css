@@ -313,6 +313,48 @@ body {
   box-shadow: 0 4px 14px rgba(37, 99, 235, 0.7);
 }
 
+/* Disabled loading state for AI button */
+.btn.primary.loading {
+  position: relative;
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.btn.primary.loading::after {
+  content: "";
+  position: absolute;
+  right: 12px;
+  top: 50%;.ai-input {
+  width: 100%;
+  box-sizing: border-box;
+
+  font-size: 11px;
+  padding: 5px 7px;
+
+  border-radius: 10px;
+  border: 1px solid #1f2937;
+  background: #020617;
+  color: #e5e7eb;
+
+  resize: vertical;
+  min-height: 40px;
+  max-width: 100%; /* prevents overflowing the card */
+}
+
+  width: 10px;
+  height: 10px;
+  border: 2px solid rgba(255,255,255,0.6);
+  border-top-color: transparent;
+  border-radius: 50%;
+  transform: translateY(-50%);
+  animation: btn-spin 0.6s linear infinite;
+}
+
+@keyframes btn-spin {
+  from { transform: translateY(-50%) rotate(0deg); }
+  to   { transform: translateY(-50%) rotate(360deg); }
+}
+
 .btn.subtle {
   background: #020617;
   border: 1px solid #1f2937;
@@ -365,6 +407,8 @@ body {
 /* AI controls */
 
 .ai-controls {
+  width: 100%;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -373,15 +417,21 @@ body {
 
 .ai-input {
   width: 100%;
+  box-sizing: border-box;
+
   font-size: 11px;
   padding: 5px 7px;
+
   border-radius: 10px;
   border: 1px solid #1f2937;
   background: #020617;
   color: #e5e7eb;
+
   resize: vertical;
   min-height: 40px;
+  max-width: 100%; /* prevents overflowing the card */
 }
+
 
 .ai-input:focus {
   outline: none;
@@ -400,6 +450,46 @@ body {
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+/* AI loading indicator */
+
+.ai-loading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0;
+}
+
+.ai-loading.hidden {
+  display: none;
+}
+
+.ai-loading .dot {
+  width: 6px;
+  height: 6px;
+  background: #38bdf8;
+  border-radius: 50%;
+  animation: ai-pulse 1s infinite ease-in-out;
+}
+
+.ai-loading .dot:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.ai-loading .dot:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes ai-pulse {
+  0% { opacity: 0.2; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.4); }
+  100% { opacity: 0.2; transform: scale(1); }
+}
+
+.ai-loading-text {
+  font-size: 11px;
+  color: #94a3b8;
 }
 
 /* Suggestion cards */
