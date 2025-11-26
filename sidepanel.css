@@ -7,6 +7,25 @@ body {
   background: #020617;
   color: #e5e7eb;
 }
+.context-title-link {
+  color: #f9fafb;
+  text-decoration: none;
+}
+
+.context-title-link:hover {
+  text-decoration: underline;
+  color: #93c5fd;
+}
+
+.s-title-link {
+  color: #f9fafb;
+  text-decoration: none;
+}
+
+.s-title-link:hover {
+  text-decoration: underline;
+  color: #93c5fd;
+}
 
 .sp-root {
   width: 100%;

@@ -221,9 +221,13 @@ function renderContextCard() {
   const titleBlock = document.createElement("div");
   titleBlock.className = "context-title-block";
 
-  const titleEl = document.createElement("div");
-  titleEl.className = "context-title";
+  const titleEl = document.createElement("a");
+  titleEl.className = "context-title context-title-link";
+  titleEl.href = `https://www.imdb.com/title/${item.imdbId}/`;
+  titleEl.target = "_blank";
+  titleEl.rel = "noopener noreferrer";
   titleEl.textContent = item.title;
+
 
   const metaEl = document.createElement("div");
   metaEl.className = "context-meta";
@@ -351,9 +355,14 @@ function renderAiResults() {
     const metaEl = node.querySelector(".s-meta");
     const scoreEl = node.querySelector(".imdb-score");
     const providersContainer = node.querySelector(".providers");
-
     const typeLabel = item.type === "movie" ? "Movie" : "TV";
+
     titleEl.textContent = item.title;
+
+    const titleLink = node.querySelector(".s-title-link");
+    titleLink.href = `https://www.imdb.com/title/${item.imdbId}/`;
+    titleLink.target = "_blank";
+
     metaEl.textContent = item.year
       ? `${typeLabel} • ${item.year}`
       : typeLabel;
