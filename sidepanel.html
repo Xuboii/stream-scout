@@ -1,68 +1,102 @@
 <!doctype html>
 <html>
-<head>
-  <meta charset="utf-8" />
-  <title>Stream Scout Side Panel</title>
-  <link rel="stylesheet" href="sidepanel.css" />
-</head>
-<body>
-  <header>
-    <h1>Stream Scout</h1>
-
-    <div class="row">
-      <input id="q" type="search" placeholder="Search movies or TV shows" />
-      <select id="type">
-        <option value="movie">Movies</option>
-        <option value="tv">TV</option>
-      </select>
-    </div>
-
-    <div class="row">
-      <label>Genres</label>
-      <select id="genre" multiple size="6"></select>
-    </div>
-
-    <div class="row">
-      <label>Sort by</label>
-      <select id="sort">
-        <option value="popularity">Popularity</option>
-        <option value="rating">IMDb rating</option>
-        <option value="year">Release year</option>
-        <option value="title">Title A to Z</option>
-      </select>
-    </div>
-
-    <div class="row">
-      <label><input type="checkbox" id="onlyAvail" /> Only with providers</label>
-    </div>
-
-    <div id="providerFilters" class="providers-row">
-      <!-- Provider chips will be populated here -->
-    </div>
-  </header>
-
-  <main id="results"></main>
-
-  <footer>
-    <button id="loadMore">Load more</button>
-  </footer>
-
-  <template id="card-tpl">
-    <article class="card">
-      <img class="poster" alt="Poster" />
-      <div class="meta">
-        <h2 class="title"></h2>
-        <div class="sub"></div>
-        <div class="imdb"></div>
-        <div class="providers"></div>
-        <div class="actions">
-          <button class="btn-watchlist">Add to Watchlist</button>
-          <button class="btn-watched">Mark Watched</button>
+  <head>
+    <meta charset="utf-8" />
+    <title>Stream Scout Side Panel</title>
+    <link rel="stylesheet" href="sidepanel.css" />
+  </head>
+  <body>
+    <div id="app" class="sp-root">
+      <header class="sp-header">
+        <div class="sp-title-block">
+          <h1 class="sp-title">Stream Scout</h1>
+          <span id="contextBadge" class="sp-context-badge">
+            Detecting page...
+          </span>
         </div>
-      </div>
-    </article>
-  </template>
+        <p id="contextSubtitle" class="sp-subtitle">
+          Open an IMDb title page to see details and AI suggestions.
+        </p>
+      </header>
 
-  <script src="sidepanel.js" type="module"></script>
-</body>
+      <main class="sp-main">
+        <!-- Context card for the title on the current page -->
+        <section class="sp-section">
+          <h2 class="sp-section-title">On this page</h2>
+          <div id="contextCard" class="context-card context-card-empty">
+            <p class="context-empty-text">
+              No supported title detected yet.
+            </p>
+          </div>
+        </section>
+
+        <!-- AI suggestions based on current title -->
+        <section class="sp-section">
+          <div class="sp-section-header">
+            <h2 class="sp-section-title">AI suggestions</h2>
+            <span id="aiStatus" class="sp-ai-status"></span>
+          </div>
+
+          <div class="ai-controls">
+            <textarea
+              id="aiPrompt"
+              class="ai-input"
+              rows="2"
+              placeholder="Tell AI what you are in the mood for (optional)"
+            ></textarea>
+            <button id="btnAskAi" class="btn primary full-width">
+              🎬 Ask AI for similar picks
+            </button>
+          </div>
+
+          <div id="aiEmpty" class="sp-empty-msg">
+            AI will suggest movies or shows based on the title on this page.
+          </div>
+
+          <div id="aiResults" class="ai-results"></div>
+        </section>
+      </main>
+    </div>
+
+    <template id="provider-pill-tpl">
+      <span class="provider-tag"></span>
+    </template>
+
+    <template id="suggestion-tpl">
+      <article class="suggest-card">
+        <div class="suggest-main">
+          <div class="suggest-header">
+            <div class="suggest-title-block">
+              <span class="s-title"></span>
+              <span class="s-meta"></span>
+            </div>
+            <span class="imdb-pill">
+              <span class="imdb-label">IMDb</span>
+              <span class="imdb-score"></span>
+            </span>
+          </div>
+          <div class="suggest-providers">
+            <span class="providers-label">Available on</span>
+            <div class="providers"></div>
+          </div>
+        </div>
+        <div class="suggest-actions">
+          <button
+            class="btn-icon btn-watchlist"
+            title="Add to watchlist"
+          >
+            ☆
+          </button>
+          <button
+            class="btn-icon btn-watched"
+            title="Mark as watched"
+          >
+            ✓
+          </button>
+        </div>
+      </article>
+    </template>
+
+    <script type="module" src="sidepanel.js"></script>
+  </body>
 </html>

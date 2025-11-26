@@ -2,7 +2,6 @@
   "manifest_version": 3,
   "name": "Stream Scout",
   "version": "0.3.0",
-  "description": "IMDb score, where to watch, and genre filters right in your browser. Track watched and watchlist.",
 
   "action": {
     "default_popup": "popup.html"
@@ -20,12 +19,7 @@
     "keyword": "ss"
   },
 
-  "permissions": [
-    "storage",
-    "contextMenus",
-    "notifications",
-    "omnibox"
-  ],
+  "permissions": ["storage", "contextMenus", "notifications", "omnibox", "tabs"],
 
   "host_permissions": [
     "http://localhost:8080/*",
@@ -39,15 +33,26 @@
 
   "content_scripts": [
     {
-      "matches": [
-        "https://*.imdb.com/*"
-      ],
-      "js": ["content/injector.js"],
-      "css": ["content/styles.css"],
+      "matches": ["https://*.imdb.com/*"],
+      "js": ["content/fallback-panel.js"],
+      "css": ["content/fallback-panel.css"],
       "run_at": "document_idle"
     }
   ],
 
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "sidepanel.html",
+        "sidepanel.css",
+        "sidepanel.js",
+        "popup.css",
+        "popup.js",
+        "assets/*"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ],
 
   "icons": {
     "16": "assets/icons/16.png",

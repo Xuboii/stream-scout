@@ -1,242 +1,475 @@
-import { pget, loadList, saveList, addTo, removeFrom } from "./shared.js";
-// shared.js will contain your pget and storage utilities.
-// If you have not made shared.js yet, I can generate it for you.
+// sidepanel.js
+// AI powered contextual helper for the current page
+
+import { pget, loadList, addTo, removeFrom } from "./shared.js";
+
+const PROXY_URL = "http://localhost:8080";
 
 const TMDB_IMG = "https://image.tmdb.org/t/p/w185";
 const COUNTRY = "US";
 
 const state = {
-  q: "",
-  type: "movie",
-  genres: [],
-  selectedGenres: new Set(),
-  sort: "popularity",
-  onlyAvail: false,
-  providerFilters: new Set(),
-  page: 1,
-  loading: false,
-  lastResults: []
+  currentItem: null,
+  watchKeys: new Set(),
+  watchedKeys: new Set(),
+  aiSuggestions: [],
+  aiLoading: false,
 };
 
-// DOM
-const elQ = document.getElementById("q");
-const elType = document.getElementById("type");
-const elGenre = document.getElementById("genre");
-const elSort = document.getElementById("sort");
-const elOnlyAvail = document.getElementById("onlyAvail");
-const elProviders = document.getElementById("providerFilters");
-const elResults = document.getElementById("results");
-const elLoadMore = document.getElementById("loadMore");
-const tplCard = document.getElementById("card-tpl");
+// DOM refs
+const badgeEl = document.getElementById("contextBadge");
+const subtitleEl = document.getElementById("contextSubtitle");
+const contextCardEl = document.getElementById("contextCard");
 
-async function loadGenres() {
-  const path = state.type === "movie" ? "/tmdb/genre/movie/list" : "/tmdb/genre/tv/list";
-  const data = await pget(path, { language: "en-US" });
-  state.genres = data.genres || [];
-  renderGenreOptions();
+const aiPromptEl = document.getElementById("aiPrompt");
+const aiStatusEl = document.getElementById("aiStatus");
+const btnAskAi = document.getElementById("btnAskAi");
+const aiEmptyEl = document.getElementById("aiEmpty");
+const aiResultsEl = document.getElementById("aiResults");
+
+const tplProvider = document.getElementById("provider-pill-tpl");
+const tplSuggestion = document.getElementById("suggestion-tpl");
+
+// Membership sets
+
+async function updateMembershipSets() {
+  const [watchlist, watched] = await Promise.all([
+    loadList("watchlist"),
+    loadList("watched"),
+  ]);
+  state.watchKeys = new Set(watchlist.map((x) => x.key));
+  state.watchedKeys = new Set(watched.map((x) => x.key));
 }
 
-function renderGenreOptions() {
-  elGenre.innerHTML = "";
-  state.genres.forEach(g => {
-    const opt = document.createElement("option");
-    opt.value = g.id;
-    opt.textContent = g.name;
-    if (state.selectedGenres.has(g.id)) opt.selected = true;
-    elGenre.appendChild(opt);
-  });
+// Provider helpers
+
+function providerClass(name) {
+  const n = name.toLowerCase();
+  if (n.includes("netflix")) return "provider-netflix";
+  if (n.includes("prime") || n.includes("amazon")) return "provider-prime";
+  if (n.includes("hulu")) return "provider-hulu";
+  if (n.includes("disney")) return "provider-disney";
+  if (n.includes("crunchy")) return "provider-crunchyroll";
+  if (n.includes("hbo") || n.includes("max")) return "provider-max";
+  if (n.includes("apple")) return "provider-apple";
+  if (n.includes("paramount")) return "provider-paramount";
+  if (n.includes("peacock")) return "provider-peacock";
+  if (n.includes("youtube")) return "provider-youtube";
+  return "";
 }
 
-async function loadProviders() {
-  const data = await pget("/tmdb/watch/providers", { type: state.type, region: COUNTRY });
-  const list = data.results || [];
-  elProviders.innerHTML = "";
-  list.forEach(p => {
-    const chip = document.createElement("span");
-    chip.className = "provider-chip";
-    chip.textContent = p.provider_name;
-    chip.dataset.id = p.provider_id;
-    chip.onclick = () => toggleProviderFilter(p.provider_id, chip);
-    elProviders.appendChild(chip);
-  });
-}
-
-function toggleProviderFilter(id, chip) {
-  if (state.providerFilters.has(id)) {
-    state.providerFilters.delete(id);
-    chip.classList.remove("active");
-  } else {
-    state.providerFilters.add(id);
-    chip.classList.add("active");
-  }
-  resetAndSearch();
-}
-
-function resetAndSearch() {
-  state.page = 1;
-  state.lastResults = [];
-  elResults.innerHTML = "";
-  doSearch();
-}
-
-async function doSearch() {
-  if (state.loading) return;
-  state.loading = true;
-
-  const query = state.q.trim();
-  if (!query) {
-    elResults.innerHTML = "";
-    state.loading = false;
+function renderProviderTags(container, providers) {
+  container.innerHTML = "";
+  if (!providers || !providers.length) {
+    const span = document.createElement("span");
+    span.className = "provider-tag";
+    span.textContent = "No providers found";
+    container.appendChild(span);
     return;
   }
 
-  const endpoint = state.type === "movie" ? "/tmdb/search/movie" : "/tmdb/search/tv";
-  const genreIds = [...state.selectedGenres].join(",");
-
-  const tmdb = await pget(endpoint, {
-    query,
-    include_adult: "false",
-    language: "en-US",
-    page: state.page
+  providers.slice(0, 8).forEach((p) => {
+    const node = tplProvider.content.firstElementChild.cloneNode(true);
+    node.textContent = p;
+    const cls = providerClass(p);
+    if (cls) node.classList.add(cls);
+    container.appendChild(node);
   });
+}
 
-  let results = (tmdb.results || []).map(r => ({
-    ...r,
-    tmdbId: r.id,
-    title: state.type === "movie" ? (r.title || r.original_title) : (r.name || r.original_name),
-    year: (r.release_date || r.first_air_date || "").slice(0, 4),
-    poster: r.poster_path ? TMDB_IMG + r.poster_path : "",
-    popularity: r.popularity || 0,
-    genre_ids: r.genre_ids || []
-  }));
+// Context detection
 
-  if (genreIds) {
-    const want = new Set([...state.selectedGenres]);
-    results = results.filter(r => r.genre_ids.some(id => want.has(id)));
+async function detectContextFromTab() {
+  try {
+    const [tab] = await chrome.tabs.query({
+      active: true,
+      currentWindow: true,
+    });
+    if (!tab || !tab.url) {
+      badgeEl.textContent = "No active tab";
+      subtitleEl.textContent = "Open an IMDb title page to get started.";
+      return null;
+    }
+
+    const url = tab.url;
+
+    // Basic IMDb title detection
+    const imdbMatch = url.match(/imdb\.com\/title\/(tt\d{5,10})/i);
+    if (imdbMatch) {
+      const imdbId = imdbMatch[1];
+      badgeEl.textContent = "IMDb title detected";
+      subtitleEl.textContent = imdbId;
+      return { kind: "imdb-title", imdbId };
+    }
+
+    badgeEl.textContent = "No title detected";
+    subtitleEl.textContent = "Navigate to an IMDb title page.";
+    return null;
+  } catch (err) {
+    console.error("tabs.query failed", err);
+    badgeEl.textContent = "Cannot read tab";
+    subtitleEl.textContent =
+      "Check extension permissions for tabs access.";
+    return null;
   }
+}
 
-  const enriched = await Promise.all(results.map(async item => {
-    const type = state.type;
-    const ext = await pget(type === "movie" ? `/tmdb/movie/${item.tmdbId}/external_ids` : `/tmdb/tv/${item.tmdbId}/external_ids`);
-    const imdbId = ext.imdb_id || null;
+// Load current item using OMDb + TMDB
 
-    let imdbRating = null;
-    if (imdbId) {
-      try {
-        const omdb = await pget("/omdb/", { i: imdbId });
-        if (omdb && omdb.imdbRating && omdb.imdbRating !== "N/A") {
-          imdbRating = omdb.imdbRating;
-        }
-      } catch (err) {
-        console.warn("OMDb lookup failed for", imdbId, err);
-        imdbRating = null;  // fail gracefully
-      }
+async function loadItemForImdbId(imdbId) {
+  try {
+    // OMDb for title metadata
+    const omdb = await pget("/omdb", { i: imdbId });
+
+    if (!omdb || omdb.Response === "False") {
+      renderEmptyContext("Could not resolve this title via OMDb.");
+      return;
     }
 
-    const prov = await pget(type === "movie" ? `/tmdb/movie/${item.tmdbId}/watch/providers` : `/tmdb/tv/${item.tmdbId}/watch/providers`);
-    const us = (prov.results && prov.results[COUNTRY]) || {};
-    const offers = [
-      ...(us.flatrate || []),
-      ...(us.ads || []),
-      ...(us.rent || []),
-      ...(us.buy || [])
-    ];
-    const providers = offers.map(o => o.provider_name);
-    const providerIds = offers.map(o => o.provider_id);
+    const title = omdb.Title || "";
+    const year = omdb.Year || "";
+    const type = omdb.Type === "series" ? "tv" : "movie";
 
-    if (state.onlyAvail && providers.length === 0) return null;
-
-    if (state.providerFilters.size > 0) {
-      const set = new Set(providerIds);
-      const hit = [...state.providerFilters].some(id => set.has(id));
-      if (!hit) return null;
-    }
-
-    return {
-      key: `${type}:${item.tmdbId}`,
+    // TMDB search to map to TMDB id
+    const tmdbSearch = await pget("/tmdb_search", {
       type,
-      tmdbId: item.tmdbId,
-      title: item.title,
-      year: item.year,
-      poster: item.poster,
+      query: title,
+      include_adult: "false",
+      language: "en-US",
+      page: "1",
+    });
+
+    const first = (tmdbSearch.results || [])[0];
+    if (!first) {
+      renderEmptyContext("No TMDB match found for this title.");
+      return;
+    }
+
+    const tmdbId = first.id;
+    const yearField =
+      first.release_date || first.first_air_date || year || "";
+    const yearResolved = yearField.slice(0, 4);
+
+    // Providers
+    let providers = [];
+    try {
+      const prov = await pget("/tmdb_providers", {
+        type,
+        id: tmdbId,
+      });
+      const us = (prov.results && prov.results[COUNTRY]) || {};
+      const offers = [
+        ...(us.flatrate || []),
+        ...(us.ads || []),
+        ...(us.rent || []),
+        ...(us.buy || []),
+      ];
+      providers = offers.map((o) => o.provider_name);
+    } catch (err) {
+      console.warn("providers lookup failed for", tmdbId, err);
+    }
+
+    const imdbRating =
+      omdb.imdbRating && omdb.imdbRating !== "N/A"
+        ? omdb.imdbRating
+        : null;
+
+    state.currentItem = {
+      key: `${type}:${tmdbId}`,
+      tmdbId,
       imdbId,
+      type,
+      title,
+      year: yearResolved,
       imdbRating,
       providers,
-      popularity: item.popularity
+      poster: first.poster_path ? TMDB_IMG + first.poster_path : "",
     };
-  }));
 
-  let items = enriched.filter(Boolean);
-
-  if (state.sort === "rating") {
-    items.sort((a, b) => (parseFloat(b.imdbRating || 0) - parseFloat(a.imdbRating || 0)));
-  } else if (state.sort === "year") {
-    items.sort((a, b) => (parseInt(b.year || 0) - parseInt(a.year || 0)));
-  } else if (state.sort === "title") {
-    items.sort((a, b) => a.title.localeCompare(b.title));
-  } else {
-    items.sort((a, b) => b.popularity - a.popularity);
+    await updateMembershipSets();
+    renderContextCard();
+  } catch (err) {
+    console.error("loadItemForImdbId failed", err);
+    renderEmptyContext("Failed to load data for this title.");
   }
-
-  state.lastResults.push(...items);
-  renderResults(items);
-
-  state.loading = false;
 }
 
-function renderResults(items) {
-  items.forEach(item => {
-    const node = tplCard.content.firstElementChild.cloneNode(true);
-    node.querySelector(".poster").src = item.poster;
-    node.querySelector(".title").textContent = item.title;
-    node.querySelector(".sub").textContent = `${item.type.toUpperCase()} ${item.year ? " • " + item.year : ""}`;
-    node.querySelector(".imdb").textContent = item.imdbRating ? "IMDb " + item.imdbRating : "IMDb N/A";
+// Rendering
 
-    const wrap = node.querySelector(".providers");
-    if (item.providers.length === 0) {
-      wrap.innerHTML = `<span class="provider-tag">No providers</span>`;
-    } else {
-      wrap.innerHTML = item.providers.slice(0, 10)
-        .map(p => `<span class="provider-tag">${p}</span>`)
-        .join("");
+function renderEmptyContext(message) {
+  contextCardEl.classList.add("context-card-empty");
+  contextCardEl.innerHTML = `
+    <p class="context-empty-text">${message}</p>
+  `;
+}
+
+function renderContextCard() {
+  const item = state.currentItem;
+  if (!item) {
+    renderEmptyContext("No supported title detected.");
+    return;
+  }
+
+  contextCardEl.classList.remove("context-card-empty");
+  contextCardEl.innerHTML = "";
+
+  const root = document.createElement("div");
+
+  const header = document.createElement("div");
+  header.className = "context-header";
+
+  const titleBlock = document.createElement("div");
+  titleBlock.className = "context-title-block";
+
+  const titleEl = document.createElement("div");
+  titleEl.className = "context-title";
+  titleEl.textContent = item.title;
+
+  const metaEl = document.createElement("div");
+  metaEl.className = "context-meta";
+
+  const typeLabel = item.type === "movie" ? "Movie" : "TV";
+  metaEl.textContent = item.year
+    ? `${typeLabel} • ${item.year}`
+    : typeLabel;
+
+  titleBlock.appendChild(titleEl);
+  titleBlock.appendChild(metaEl);
+
+  const imdbPill = document.createElement("span");
+  imdbPill.className = "imdb-pill";
+  imdbPill.innerHTML = `
+    <span class="imdb-label">IMDb</span>
+    <span class="imdb-score">${item.imdbRating || "N/A"}</span>
+  `;
+
+  header.appendChild(titleBlock);
+  header.appendChild(imdbPill);
+
+  // Status row
+  const statusRow = document.createElement("div");
+  statusRow.className = "context-status-row";
+
+  const inWatchlist = state.watchKeys.has(item.key);
+  const inWatched = state.watchedKeys.has(item.key);
+
+  const pill = document.createElement("span");
+  pill.className = "context-status-pill";
+
+  if (inWatched) {
+    pill.textContent = "Already in your Watched list";
+  } else if (inWatchlist) {
+    pill.textContent = "Already in your Watchlist";
+  } else {
+    pill.textContent = "Not in your lists yet";
+  }
+  statusRow.appendChild(pill);
+
+  // Actions
+  const actions = document.createElement("div");
+  actions.className = "context-actions";
+
+  const btnWatchlist = document.createElement("button");
+  btnWatchlist.className = "btn subtle";
+  btnWatchlist.textContent = inWatchlist ? "In watchlist" : "Add to watchlist";
+  if (inWatchlist || inWatched) {
+    btnWatchlist.classList.add("active");
+  }
+
+  const btnWatched = document.createElement("button");
+  btnWatched.className = "btn subtle";
+  btnWatched.textContent = inWatched ? "Already watched" : "Mark as watched";
+
+  if (inWatched) {
+    btnWatched.classList.add("active");
+    btnWatched.disabled = true;
+  }
+
+  btnWatchlist.addEventListener("click", async () => {
+    if (inWatched) return; // nothing to do
+    await addTo("watchlist", item);
+    await updateMembershipSets();
+    renderContextCard();
+  });
+
+  btnWatched.addEventListener("click", async () => {
+    if (inWatched) return;
+    await addTo("watched", item);
+    await removeFrom("watchlist", item.key);
+    await updateMembershipSets();
+    renderContextCard();
+  });
+
+  actions.appendChild(btnWatchlist);
+  actions.appendChild(btnWatched);
+
+  // Providers
+  const providersBlock = document.createElement("div");
+  providersBlock.className = "context-providers";
+
+  const label = document.createElement("span");
+  label.className = "context-label";
+  label.textContent = "Available on";
+
+  const providersContainer = document.createElement("div");
+  providersContainer.className = "providers";
+
+  providersBlock.appendChild(label);
+  providersBlock.appendChild(providersContainer);
+
+  renderProviderTags(providersContainer, item.providers);
+
+  root.appendChild(header);
+  root.appendChild(statusRow);
+  root.appendChild(actions);
+  root.appendChild(providersBlock);
+
+  contextCardEl.appendChild(root);
+}
+
+// AI suggestions
+
+function setAiLoading(loading) {
+  state.aiLoading = loading;
+  btnAskAi.disabled = loading || !state.currentItem;
+  aiStatusEl.textContent = loading ? "Thinking..." : "";
+}
+
+function renderAiResults() {
+  aiResultsEl.innerHTML = "";
+
+  if (!state.aiSuggestions.length) {
+    aiEmptyEl.style.display = "block";
+    return;
+  }
+  aiEmptyEl.style.display = "none";
+
+  state.aiSuggestions.forEach((item) => {
+    const node = tplSuggestion.content.firstElementChild.cloneNode(true);
+
+    const titleEl = node.querySelector(".s-title");
+    const metaEl = node.querySelector(".s-meta");
+    const scoreEl = node.querySelector(".imdb-score");
+    const providersContainer = node.querySelector(".providers");
+
+    const typeLabel = item.type === "movie" ? "Movie" : "TV";
+    titleEl.textContent = item.title;
+    metaEl.textContent = item.year
+      ? `${typeLabel} • ${item.year}`
+      : typeLabel;
+    scoreEl.textContent = item.imdbRating || "N/A";
+
+    renderProviderTags(providersContainer, item.providers || []);
+
+    const btnWatchlist = node.querySelector(".btn-watchlist");
+    const btnWatched = node.querySelector(".btn-watched");
+
+    const key = item.key;
+    const inWatchlist = state.watchKeys.has(key);
+    const inWatched = state.watchedKeys.has(key);
+
+    if (inWatched) {
+      btnWatched.classList.add("active");
+      btnWatched.disabled = true;
+      btnWatchlist.disabled = true;
+    } else if (inWatchlist) {
+      btnWatchlist.classList.add("active");
     }
 
-    node.querySelector(".btn-watchlist").onclick = async () => {
+    btnWatchlist.addEventListener("click", async (e) => {
+      e.stopPropagation();
       await addTo("watchlist", item);
-    };
+      await updateMembershipSets();
+      renderAiResults();
+    });
 
-    node.querySelector(".btn-watched").onclick = async () => {
-      await removeFrom("watchlist", item.key);
+    btnWatched.addEventListener("click", async (e) => {
+      e.stopPropagation();
       await addTo("watched", item);
-    };
+      await removeFrom("watchlist", key);
+      await updateMembershipSets();
+      renderAiResults();
+    });
 
-    elResults.appendChild(node);
+    aiResultsEl.appendChild(node);
   });
 }
 
-// event handlers
-elQ.addEventListener("input", e => { state.q = e.target.value; resetAndSearch(); });
-elType.addEventListener("change", async e => {
-  state.type = e.target.value;
-  state.selectedGenres.clear();
-  state.providerFilters.clear();
-  await loadGenres();
-  await loadProviders();
-  resetAndSearch();
-});
-elGenre.addEventListener("change", e => {
-  state.selectedGenres = new Set([...e.target.selectedOptions].map(o => Number(o.value)));
-  resetAndSearch();
-});
-elSort.addEventListener("change", e => { state.sort = e.target.value; resetAndSearch(); });
-elOnlyAvail.addEventListener("change", e => { state.onlyAvail = e.target.checked; resetAndSearch(); });
-elLoadMore.addEventListener("click", () => {
-  state.page += 1;
-  doSearch();
+async function askAiForSuggestions() {
+  const baseItem = state.currentItem;
+  if (!baseItem) {
+    aiStatusEl.textContent = "No title detected.";
+    return;
+  }
+
+  setAiLoading(true);
+  aiStatusEl.textContent = "";
+
+  const payload = {
+    title: baseItem.title,
+    year: baseItem.year,
+    type: baseItem.type,
+    imdbRating: baseItem.imdbRating,
+    providers: baseItem.providers,
+    mood: aiPromptEl.value || "",
+  };
+
+  try {
+    const res = await fetch(PROXY_URL + "/ai_recommend", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      throw new Error("AI request failed with status " + res.status);
+    }
+
+    const json = await res.json();
+    // Expected response shape:
+    // { items: [{ key, title, year, type, imdbRating, providers }] }
+    const items = json.items || [];
+
+    state.aiSuggestions = items.map((it) => {
+      // Ensure there is a key
+      if (!it.key) {
+        const type = it.type === "tv" ? "tv" : "movie";
+        it.key = `${type}:${it.tmdbId || it.title}`;
+      }
+      return it;
+    });
+
+    await updateMembershipSets();
+    renderAiResults();
+    aiStatusEl.textContent = items.length
+      ? "AI suggestions updated."
+      : "AI did not find suitable matches.";
+  } catch (err) {
+    console.error("AI error", err);
+    aiStatusEl.textContent = "AI request failed.";
+  } finally {
+    setAiLoading(false);
+  }
+}
+
+// Events
+
+btnAskAi.addEventListener("click", () => {
+  askAiForSuggestions();
 });
 
-// init
+// Init
+
 (async () => {
-  await loadGenres();
-  await loadProviders();
+  await updateMembershipSets();
+
+  const ctx = await detectContextFromTab();
+  if (ctx && ctx.kind === "imdb-title") {
+    await loadItemForImdbId(ctx.imdbId);
+  } else {
+    renderEmptyContext("Open an IMDb title page to see details here.");
+  }
+
+  // If we do not have a current item, AI button stays disabled
+  btnAskAi.disabled = !state.currentItem;
 })();

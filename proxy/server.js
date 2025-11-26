@@ -128,6 +128,24 @@ app.get("/tmdb_providers", async (req, res) => {
   }
 });
 
+app.post("/ai_recommend", async (req, res) => {
+  try {
+    const body = req.body; // { title, year, type, mood, ... }
+
+    // Call OpenAI or your model here using body.title etc
+    // Then map to a structure like:
+    // { items: [{ key, title, year, type, imdbRating, providers }] }
+
+    res.json({ items: [] }); // placeholder
+  } catch (err) {
+    console.error("ai_recommend error", err);
+    res.status(500).json({ error: "AI recommend failed" });
+  }
+});
+
+
 app.listen(PORT, () => {
   console.log(`Stream Scout Proxy running at http://localhost:${PORT}`);
 });
+
+
