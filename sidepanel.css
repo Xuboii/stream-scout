@@ -415,7 +415,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  margin-bottom: 6px;
+  margin-bottom: 10px;
 }
 
 .ai-input {
@@ -493,6 +493,10 @@ body {
 .ai-loading-text {
   font-size: 11px;
   color: #94a3b8;
+}
+
+#aiResults {
+  margin-top: 8px;
 }
 
 /* Suggestion cards */
