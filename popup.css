@@ -1,3 +1,5 @@
+/* FILE: popup.css */
+
 /* Basic layout */
 
 body {
@@ -382,6 +384,8 @@ select:focus {
   cursor: default;
 }
 
+/* Active states for watchlist and watched */
+
 .btn-watchlist.active {
   background: #0ea5e9;
   border-color: #0ea5e9;
@@ -389,36 +393,9 @@ select:focus {
 }
 
 .btn-watched.active {
-  background: #22c55e;
-  border-color: #22c55e;
-  color: #022c22;
-}
-
-/* Hover poster preview */
-
-.preview {
-  position: absolute;
-  width: 145px;
-  pointer-events: none;
-  opacity: 0;
-  transform: translateY(4px);
-  filter: blur(8px);
-  transition:
-    opacity 0.18s ease,
-    transform 0.18s ease,
-    filter 0.18s ease;
-}
-
-.preview.visible {
-  opacity: 1;
-  transform: translateY(0);
-  filter: blur(0);
-}
-
-.preview-poster {
-  width: 145px;
-  border-radius: 12px;
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.9);
+  background: #0f766e;       /* softer teal, less loud */
+  border-color: #0f766e;
+  color: #d1faf5;
 }
 
 /* Scrollbar styling */

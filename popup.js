@@ -1,3 +1,5 @@
+// FILE: popup.js
+
 // Basic constants
 const TMDB_IMG = "https://image.tmdb.org/t/p/w185";
 const COUNTRY = "US";
@@ -13,6 +15,8 @@ const state = {
   providerFilter: new Set(),
   minRating: "",
   onlyAvail: false,
+  watchKeys: new Set(),
+  watchedKeys: new Set(),
 };
 
 // DOM refs
@@ -33,9 +37,6 @@ const btnTabSearch = document.getElementById("tabSearch");
 const btnTabWatchlist = document.getElementById("tabWatchlist");
 const btnTabWatched = document.getElementById("tabWatched");
 const btnSearch = document.getElementById("btnSearch");
-
-const previewEl = document.getElementById("hoverPreview");
-const previewPoster = document.getElementById("previewPoster");
 
 let currentItems = [];
 
@@ -62,6 +63,16 @@ const removeFrom = async (key, tmdbKey) => {
   const next = arr.filter((x) => x.key !== tmdbKey);
   await saveList(key, next);
 };
+
+// Keep quick membership sets for indicators
+async function updateMembershipSets() {
+  const [watchlist, watched] = await Promise.all([
+    loadList("watchlist"),
+    loadList("watched"),
+  ]);
+  state.watchKeys = new Set(watchlist.map((x) => x.key));
+  state.watchedKeys = new Set(watched.map((x) => x.key));
+}
 
 // ---------------------------------------------------------------------
 // Simple proxy GET
@@ -277,11 +288,12 @@ async function doSearch() {
     });
   }
 
+  await updateMembershipSets();
   renderResults(filtered);
 }
 
 // ---------------------------------------------------------------------
-// Rendering and hover preview
+// Rendering
 // ---------------------------------------------------------------------
 
 function renderResults(items) {
@@ -298,6 +310,9 @@ function renderResults(items) {
   }
 
   elEmpty.style.display = "none";
+
+  const watchKeys = state.watchKeys || new Set();
+  const watchedKeys = state.watchedKeys || new Set();
 
   items.forEach((item) => {
     const node = tplRow.content.firstElementChild.cloneNode(true);
@@ -322,33 +337,57 @@ function renderResults(items) {
     const btnWatched = node.querySelector(".btn-watched");
     const btnRemove = node.querySelector(".btn-remove");
 
-    // Configure actions based on tab
+    const inWatchlist = watchKeys.has(item.key);
+    const inWatched = watchedKeys.has(item.key);
+
+    // Reset common state
+    btnWatchlist.style.display = "inline-flex";
+    btnWatched.style.display = "inline-flex";
+    btnRemove.style.display = "inline-flex";
+
+    btnWatchlist.disabled = false;
+    btnWatched.disabled = false;
+    btnWatchlist.classList.remove("active");
+    btnWatched.classList.remove("active");
+    btnWatchlist.textContent = "☆";
+    btnWatched.textContent = "✓";
+
     if (state.tab === "search") {
-      btnWatchlist.style.display = "inline-flex";
-      btnWatched.style.display = "inline-flex";
+      // Search: show both actions, hide remove
       btnRemove.style.display = "none";
 
-      btnWatchlist.disabled = false;
-      btnWatched.disabled = false;
+      if (inWatched) {
+        // Already watched: show teal check, disable both
+        btnWatched.classList.add("active");
+        btnWatched.disabled = true;
+        btnWatched.title = "Already watched";
 
-      btnWatchlist.title = "Add to watchlist";
-      btnWatched.title = "Mark as watched";
+        btnWatchlist.disabled = true;
+        btnWatchlist.title = "Already watched";
+      } else if (inWatchlist) {
+        // In watchlist only
+        btnWatchlist.classList.add("active");
+        btnWatchlist.textContent = "★";
+        btnWatchlist.title = "In watchlist";
+        btnWatched.title = "Mark as watched";
+      } else {
+        // Not in either list
+        btnWatchlist.title = "Add to watchlist";
+        btnWatched.title = "Mark as watched";
+      }
     } else if (state.tab === "watchlist") {
+      // Watchlist tab: move to watched or remove
       btnWatchlist.style.display = "none";
-      btnWatched.style.display = "inline-flex";
-      btnRemove.style.display = "inline-flex";
 
       btnWatched.disabled = false;
-      btnWatched.classList.add("active");
-      btnWatched.title = "Mark as watched";
+      btnWatched.title = "Move to watched";
       btnRemove.title = "Remove from watchlist";
     } else if (state.tab === "watched") {
+      // Watched tab: subtle already watched check, remove option
       btnWatchlist.style.display = "none";
-      btnWatched.style.display = "inline-flex";
-      btnRemove.style.display = "inline-flex";
 
-      btnWatched.disabled = true;
       btnWatched.classList.add("active");
+      btnWatched.disabled = true;
       btnWatched.title = "Already watched";
       btnRemove.title = "Remove from watched";
     }
@@ -356,69 +395,52 @@ function renderResults(items) {
     // Click handlers
     btnWatchlist.addEventListener("click", async (e) => {
       e.stopPropagation();
+      if (state.tab !== "search") return;
+
       await addTo("watchlist", item);
+      await updateMembershipSets();
+
       btnWatchlist.classList.add("active");
+      btnWatchlist.textContent = "★";
+      btnWatchlist.title = "In watchlist";
     });
 
     btnWatched.addEventListener("click", async (e) => {
       e.stopPropagation();
-      if (state.tab === "watchlist") {
-        await removeFrom("watchlist", item.key);
-      }
-      await addTo("watched", item);
+
       if (state.tab === "search") {
+        // From search: mark watched, remove from watchlist if present
+        await addTo("watched", item);
+        await removeFrom("watchlist", item.key);
+        await updateMembershipSets();
+
         btnWatched.classList.add("active");
-      } else {
+        btnWatched.disabled = true;
+        btnWatched.title = "Already watched";
+
+        btnWatchlist.disabled = true;
+        btnWatchlist.classList.remove("active");
+        btnWatchlist.textContent = "☆";
+      } else if (state.tab === "watchlist") {
+        // From watchlist: move to watched and refresh
+        await removeFrom("watchlist", item.key);
+        await addTo("watched", item);
+        await updateMembershipSets();
         await refreshTab();
       }
+      // In watched tab the button is disabled so click will not fire
     });
 
     btnRemove.addEventListener("click", async (e) => {
       e.stopPropagation();
       const listKey = state.tab === "watchlist" ? "watchlist" : "watched";
       await removeFrom(listKey, item.key);
+      await updateMembershipSets();
       await refreshTab();
     });
 
-    // Hover preview for poster
-    node.addEventListener("mouseenter", () => showPreview(item, node));
-    node.addEventListener("mouseleave", hidePreviewSoon);
-
     elResults.appendChild(node);
   });
-}
-
-// Preview helpers
-
-let hidePreviewTimer = null;
-
-function showPreview(item, node) {
-  if (!item.poster) {
-    hidePreview();
-    return;
-  }
-
-  previewPoster.src = item.poster;
-
-  const appRect = appEl.getBoundingClientRect();
-  const rowRect = node.getBoundingClientRect();
-
-  const top = rowRect.top - appRect.top + 4;
-  previewEl.style.top = `${top}px`;
-  previewEl.style.right = "8px";
-
-  previewEl.classList.remove("hidden");
-  previewEl.classList.add("visible");
-}
-
-function hidePreview() {
-  previewEl.classList.remove("visible");
-  previewEl.classList.add("hidden");
-}
-
-function hidePreviewSoon() {
-  if (hidePreviewTimer) clearTimeout(hidePreviewTimer);
-  hidePreviewTimer = setTimeout(hidePreview, 120);
 }
 
 // ---------------------------------------------------------------------
@@ -430,9 +452,11 @@ async function refreshTab() {
     await doSearch();
   } else if (state.tab === "watchlist") {
     const items = await loadList("watchlist");
+    await updateMembershipSets();
     renderResults(items);
   } else if (state.tab === "watched") {
     const items = await loadList("watched");
+    await updateMembershipSets();
     renderResults(items);
   }
 }
@@ -445,7 +469,6 @@ function setTab(tab) {
   btnTabWatched.classList.toggle("active", tab === "watched");
 
   elControls.style.display = tab === "search" ? "block" : "none";
-  hidePreview();
 
   refreshTab();
 }
@@ -515,5 +538,6 @@ document
 
 (async () => {
   await loadGenres();
+  await updateMembershipSets();
   setTab("search");
 })();
