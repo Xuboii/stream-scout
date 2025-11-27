@@ -401,6 +401,12 @@ body {
   color: #f9fafb;
 }
 
+.btn-watchlist.active:hover {
+  background: #1e293b;
+  border-color: #1e293b;
+  color: #f9fafb;
+}
+
 .btn-watched.active {
   background: #0f766e;
   border-color: #0f766e;

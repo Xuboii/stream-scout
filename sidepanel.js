@@ -30,18 +30,19 @@ const aiResultsEl = document.getElementById("aiResults");
 const tplProvider = document.getElementById("provider-pill-tpl");
 const tplSuggestion = document.getElementById("suggestion-tpl");
 
-// Membership sets
+// Load membership sets
 
 async function updateMembershipSets() {
   const [watchlist, watched] = await Promise.all([
     loadList("watchlist"),
     loadList("watched"),
   ]);
+
   state.watchKeys = new Set(watchlist.map((x) => x.key));
   state.watchedKeys = new Set(watched.map((x) => x.key));
 }
 
-// Provider helpers
+// Provider styling helper
 
 function providerClass(name) {
   const n = name.toLowerCase();
@@ -60,6 +61,7 @@ function providerClass(name) {
 
 function renderProviderTags(container, providers) {
   container.innerHTML = "";
+
   if (!providers || !providers.length) {
     const span = document.createElement("span");
     span.className = "provider-tag";
@@ -77,7 +79,7 @@ function renderProviderTags(container, providers) {
   });
 }
 
-// Context detection
+// Detect IMDb page in active tab
 
 async function detectContextFromTab() {
   try {
@@ -85,16 +87,16 @@ async function detectContextFromTab() {
       active: true,
       currentWindow: true,
     });
+
     if (!tab || !tab.url) {
       badgeEl.textContent = "No active tab";
-      subtitleEl.textContent = "Open an IMDb title page to get started.";
+      subtitleEl.textContent = "Open an IMDb title page.";
       return null;
     }
 
     const url = tab.url;
-
-    // Basic IMDb title detection
     const imdbMatch = url.match(/imdb\.com\/title\/(tt\d{5,10})/i);
+
     if (imdbMatch) {
       const imdbId = imdbMatch[1];
       badgeEl.textContent = "IMDb title detected";
@@ -108,21 +110,19 @@ async function detectContextFromTab() {
   } catch (err) {
     console.error("tabs.query failed", err);
     badgeEl.textContent = "Cannot read tab";
-    subtitleEl.textContent =
-      "Check extension permissions for tabs access.";
+    subtitleEl.textContent = "Check tab permissions.";
     return null;
   }
 }
 
-// Load current item using OMDb + TMDB
+// Load item from OMDb and TMDB
 
 async function loadItemForImdbId(imdbId) {
   try {
-    // OMDb for title metadata
     const omdb = await pget("/omdb", { i: imdbId });
 
     if (!omdb || omdb.Response === "False") {
-      renderEmptyContext("Could not resolve this title via OMDb.");
+      renderEmptyContext("Could not load IMDb metadata.");
       return;
     }
 
@@ -130,7 +130,6 @@ async function loadItemForImdbId(imdbId) {
     const year = omdb.Year || "";
     const type = omdb.Type === "series" ? "tv" : "movie";
 
-    // TMDB search to map to TMDB id
     const tmdbSearch = await pget("/tmdb_search", {
       type,
       query: title,
@@ -140,23 +139,20 @@ async function loadItemForImdbId(imdbId) {
     });
 
     const first = (tmdbSearch.results || [])[0];
+
     if (!first) {
-      renderEmptyContext("No TMDB match found for this title.");
+      renderEmptyContext("TMDB did not have this title.");
       return;
     }
 
     const tmdbId = first.id;
-    const yearField =
-      first.release_date || first.first_air_date || year || "";
+    const yearField = first.release_date || first.first_air_date || year || "";
     const yearResolved = yearField.slice(0, 4);
 
-    // Providers
     let providers = [];
+
     try {
-      const prov = await pget("/tmdb_providers", {
-        type,
-        id: tmdbId,
-      });
+      const prov = await pget("/tmdb_providers", { type, id: tmdbId });
       const us = (prov.results && prov.results[COUNTRY]) || {};
       const offers = [
         ...(us.flatrate || []),
@@ -166,7 +162,7 @@ async function loadItemForImdbId(imdbId) {
       ];
       providers = offers.map((o) => o.provider_name);
     } catch (err) {
-      console.warn("providers lookup failed for", tmdbId, err);
+      console.warn("Provider fetch failed", err);
     }
 
     const imdbRating =
@@ -190,11 +186,11 @@ async function loadItemForImdbId(imdbId) {
     renderContextCard();
   } catch (err) {
     console.error("loadItemForImdbId failed", err);
-    renderEmptyContext("Failed to load data for this title.");
+    renderEmptyContext("Failed to load this title.");
   }
 }
 
-// Rendering
+// Empty card template
 
 function renderEmptyContext(message) {
   contextCardEl.classList.add("context-card-empty");
@@ -203,10 +199,11 @@ function renderEmptyContext(message) {
   `;
 }
 
-// Single, clean implementation of renderContextCard
+// Render context card
 
 function renderContextCard() {
   const item = state.currentItem;
+
   if (!item) {
     renderEmptyContext("No supported title detected.");
     return;
@@ -215,34 +212,27 @@ function renderContextCard() {
   contextCardEl.classList.remove("context-card-empty");
   contextCardEl.innerHTML = "";
 
-  // Outer card
   const card = document.createElement("article");
   card.className = "suggest-card ctx-card";
 
-  // Main content
   const main = document.createElement("div");
   main.className = "suggest-main";
 
-  // Title
   const titleEl = document.createElement("h2");
   titleEl.className = "ctx-title-centered";
   titleEl.textContent = item.title;
 
-  // Meta
   const metaEl = document.createElement("div");
   metaEl.className = "ctx-meta-centered";
   const typeLabel = item.type === "movie" ? "Movie" : "TV";
   metaEl.textContent = item.year ? `${typeLabel} • ${item.year}` : typeLabel;
 
-  // Score row
   const scoreRow = document.createElement("div");
   scoreRow.className = "ctx-score-row";
 
-  // Score group (two vertical blocks)
   const scoreGroup = document.createElement("div");
   scoreGroup.className = "ctx-score-group";
 
-  // IMDb vertical block
   const imdbBlock = document.createElement("div");
   imdbBlock.className = "ctx-score-vertical";
   imdbBlock.innerHTML = `
@@ -250,7 +240,6 @@ function renderContextCard() {
     <div class="ctx-score-value">${item.imdbRating || "N/A"}</div>
   `;
 
-  // Personal rating vertical block
   const scoreBlock = document.createElement("div");
   scoreBlock.className = "ctx-score-vertical";
 
@@ -273,7 +262,6 @@ function renderContextCard() {
   scoreGroup.appendChild(imdbBlock);
   scoreGroup.appendChild(scoreBlock);
 
-  // Actions to the right
   const actionsInline = document.createElement("div");
   actionsInline.className = "ctx-actions-inline";
 
@@ -291,8 +279,6 @@ function renderContextCard() {
   scoreRow.appendChild(scoreGroup);
   scoreRow.appendChild(actionsInline);
 
-
-  // Providers
   const providersWrap = document.createElement("div");
   providersWrap.className = "suggest-providers";
 
@@ -308,48 +294,53 @@ function renderContextCard() {
 
   renderProviderTags(providerContainer, item.providers);
 
-  // Assemble main
   main.appendChild(titleEl);
   main.appendChild(metaEl);
   main.appendChild(scoreRow);
   main.appendChild(providersWrap);
 
-  // Membership state and handlers
   const key = item.key;
   const inWatchlist = state.watchKeys.has(key);
   const inWatched = state.watchedKeys.has(key);
 
-  if (inWatched) {
-    btnWatched.classList.add("active");
-    btnWatched.disabled = true;
-    btnWatchlist.disabled = true;
-  } else if (inWatchlist) {
-    btnWatchlist.classList.add("active");
-  }
+  btnWatchlist.classList.toggle("active", inWatchlist);
+  btnWatched.classList.toggle("active", inWatched);
+
+  btnWatchlist.title = inWatchlist ? "Remove from watchlist" : "Add to watchlist";
+  btnWatched.title = inWatched ? "Remove from watched" : "Mark as watched";
 
   btnWatchlist.addEventListener("click", async (e) => {
     e.stopPropagation();
-    if (state.watchedKeys.has(key)) return;
-    await addTo("watchlist", item);
+
+    if (inWatchlist) {
+      await removeFrom("watchlist", key);
+    } else {
+      await addTo("watchlist", item);
+    }
+
     await updateMembershipSets();
     renderContextCard();
   });
 
   btnWatched.addEventListener("click", async (e) => {
     e.stopPropagation();
-    if (state.watchedKeys.has(key)) return;
-    await addTo("watched", item);
-    await removeFrom("watchlist", key);
+
+    if (inWatched) {
+      await removeFrom("watched", key);
+    } else {
+      await addTo("watched", item);
+      await removeFrom("watchlist", key);
+    }
+
     await updateMembershipSets();
     renderContextCard();
   });
 
-  // Final assemble
   card.appendChild(main);
   contextCardEl.appendChild(card);
 }
 
-// AI suggestions
+// AI loading state
 
 function setAiLoading(loading) {
   state.aiLoading = loading;
@@ -360,16 +351,16 @@ function setAiLoading(loading) {
     btnAskAi.disabled = true;
     btnAskAi.classList.add("loading");
     btnAskAi.textContent = "Searching...";
-
     loadingBox.classList.remove("hidden");
   } else {
     btnAskAi.disabled = !state.currentItem;
     btnAskAi.classList.remove("loading");
-    btnAskAi.textContent = "🎬 Ask AI for similar picks";
-
+    btnAskAi.textContent = "Ask AI for similar picks";
     loadingBox.classList.add("hidden");
   }
 }
+
+// Render AI suggestions
 
 function renderAiResults() {
   aiResultsEl.innerHTML = "";
@@ -378,6 +369,7 @@ function renderAiResults() {
     aiEmptyEl.style.display = "block";
     return;
   }
+
   aiEmptyEl.style.display = "none";
 
   state.aiSuggestions.forEach((item) => {
@@ -387,17 +379,14 @@ function renderAiResults() {
     const metaEl = node.querySelector(".s-meta");
     const scoreEl = node.querySelector(".imdb-score");
     const providersContainer = node.querySelector(".providers");
+
+    const key = item.key;
     const typeLabel = item.type === "movie" ? "Movie" : "TV";
+    const inWatchlist = state.watchKeys.has(key);
+    const inWatched = state.watchedKeys.has(key);
 
     titleEl.textContent = item.title;
-
-    const titleLink = node.querySelector(".s-title-link");
-    titleLink.href = `https://www.imdb.com/title/${item.imdbId}/`;
-    titleLink.target = "_blank";
-
-    metaEl.textContent = item.year
-      ? `${typeLabel} • ${item.year}`
-      : typeLabel;
+    metaEl.textContent = item.year ? `${typeLabel} • ${item.year}` : typeLabel;
     scoreEl.textContent = item.imdbRating || "N/A";
 
     renderProviderTags(providersContainer, item.providers || []);
@@ -405,29 +394,35 @@ function renderAiResults() {
     const btnWatchlist = node.querySelector(".btn-watchlist");
     const btnWatched = node.querySelector(".btn-watched");
 
-    const key = item.key;
-    const inWatchlist = state.watchKeys.has(key);
-    const inWatched = state.watchedKeys.has(key);
+    btnWatchlist.classList.toggle("active", inWatchlist);
+    btnWatched.classList.toggle("active", inWatched);
 
-    if (inWatched) {
-      btnWatched.classList.add("active");
-      btnWatched.disabled = true;
-      btnWatchlist.disabled = true;
-    } else if (inWatchlist) {
-      btnWatchlist.classList.add("active");
-    }
+    btnWatchlist.title = inWatchlist ? "Remove from watchlist" : "Add to watchlist";
+    btnWatched.title = inWatched ? "Remove from watched" : "Mark as watched";
 
     btnWatchlist.addEventListener("click", async (e) => {
       e.stopPropagation();
-      await addTo("watchlist", item);
+
+      if (inWatchlist) {
+        await removeFrom("watchlist", key);
+      } else {
+        await addTo("watchlist", item);
+      }
+
       await updateMembershipSets();
       renderAiResults();
     });
 
     btnWatched.addEventListener("click", async (e) => {
       e.stopPropagation();
-      await addTo("watched", item);
-      await removeFrom("watchlist", key);
+
+      if (inWatched) {
+        await removeFrom("watched", key);
+      } else {
+        await addTo("watched", item);
+        await removeFrom("watchlist", key);
+      }
+
       await updateMembershipSets();
       renderAiResults();
     });
@@ -436,8 +431,11 @@ function renderAiResults() {
   });
 }
 
+// Ask AI
+
 async function askAiForSuggestions() {
   const baseItem = state.currentItem;
+
   if (!baseItem) {
     aiStatusEl.textContent = "No title detected.";
     return;
@@ -481,9 +479,10 @@ async function askAiForSuggestions() {
 
     await updateMembershipSets();
     renderAiResults();
+
     aiStatusEl.textContent = items.length
       ? "AI suggestions updated."
-      : "AI did not find suitable matches.";
+      : "No matches found.";
   } catch (err) {
     console.error("AI error", err);
     aiStatusEl.textContent = "AI request failed.";
@@ -492,12 +491,14 @@ async function askAiForSuggestions() {
   }
 }
 
-// Collapsible panel
+// Collapse button
 
 const collapseBtn = document.getElementById("sp-collapse-btn");
 
 collapseBtn.addEventListener("click", () => {
-  chrome.runtime.sendMessage({ action: "STREAM_SCOUT_COLLAPSE_TOGGLE" });
+  chrome.runtime.sendMessage({
+    action: "STREAM_SCOUT_COLLAPSE_TOGGLE",
+  });
 });
 
 // Events
@@ -512,6 +513,7 @@ btnAskAi.addEventListener("click", () => {
   await updateMembershipSets();
 
   const ctx = await detectContextFromTab();
+
   if (ctx && ctx.kind === "imdb-title") {
     await loadItemForImdbId(ctx.imdbId);
   } else {
