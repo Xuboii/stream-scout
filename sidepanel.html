@@ -22,46 +22,80 @@
         </header>
 
         <main class="sp-main">
-          <!-- Context card for the title on the current page -->
-          <section class="sp-section">
-            <h2 class="sp-section-title">On this page</h2>
-            <div id="contextCard" class="context-card context-card-empty">
-              <p class="context-empty-text">
-                No supported title detected yet.
-              </p>
-            </div>
-          </section>
 
-          <!-- AI suggestions based on current title -->
-          <section class="sp-section">
-            <div class="sp-section-header">
-              <h2 class="sp-section-title">AI suggestions</h2>
-              <div id="aiStatus" class="ai-loading hidden">
-                <div class="dot"></div>
-                <div class="dot"></div>
-                <div class="dot"></div>
-                <span class="ai-loading-text">Searching for recommendations...</span>
+          <!-- TAB HEADER -->
+          <div class="sp-tabs">
+            <button class="sp-tab-btn active" data-tab="search">Search</button>
+            <button class="sp-tab-btn" data-tab="watchlist">Watchlist</button>
+            <button class="sp-tab-btn" data-tab="watched">Watched</button>
+          </div>
+
+          <!-- SEARCH TAB (current behavior) -->
+          <div id="tab-search" class="sp-tab-panel" style="display: block;">
+            <!-- Context card for the title on the current page -->
+            <section class="sp-section">
+              <h2 class="sp-section-title">On this page</h2>
+              <div id="contextCard" class="context-card context-card-empty">
+                <p class="context-empty-text">
+                  No supported title detected yet.
+                </p>
               </div>
-            </div>
+            </section>
 
-            <div class="ai-controls">
-              <textarea
-                id="aiPrompt"
-                class="ai-input"
-                rows="2"
-                placeholder="Tell AI what you are in the mood for (optional)"
-              ></textarea>
-              <button id="btnAskAi" class="btn primary full-width">
-                🎬 Ask AI for similar picks
-              </button>
-            </div>
+            <!-- AI suggestions based on current title -->
+            <section class="sp-section">
+              <div class="sp-section-header">
+                <h2 class="sp-section-title">AI suggestions</h2>
+                <div id="aiStatus" class="ai-loading hidden">
+                  <div class="dot"></div>
+                  <div class="dot"></div>
+                  <div class="dot"></div>
+                  <span class="ai-loading-text">
+                    Searching for recommendations...
+                  </span>
+                </div>
+              </div>
 
-            <div id="aiEmpty" class="sp-empty-msg">
-              AI will suggest movies or shows based on the title on this page.
-            </div>
+              <div class="ai-controls">
+                <textarea
+                  id="aiPrompt"
+                  class="ai-input"
+                  rows="2"
+                  placeholder="Tell AI what you are in the mood for (optional)"
+                ></textarea>
+                <button id="btnAskAi" class="btn primary full-width">
+                  🎬 Ask AI for similar picks
+                </button>
+              </div>
 
-            <div id="aiResults" class="ai-results"></div>
-          </section>
+              <div id="aiEmpty" class="sp-empty-msg">
+                AI will suggest movies or shows based on the title on this page.
+              </div>
+
+              <div id="aiResults" class="ai-results"></div>
+            </section>
+          </div>
+
+          <!-- WATCHLIST TAB -->
+          <div id="tab-watchlist" class="sp-tab-panel" style="display: none;">
+            <section class="sp-section">
+              <h2 class="sp-section-title">Watchlist</h2>
+              <div id="watchlistContainer" class="ctx-list">
+                <!-- watchlist cards rendered here -->
+              </div>
+            </section>
+          </div>
+
+          <!-- WATCHED TAB -->
+          <div id="tab-watched" class="sp-tab-panel" style="display: none;">
+            <section class="sp-section">
+              <h2 class="sp-section-title">Watched</h2>
+              <div id="watchedContainer" class="ctx-list">
+                <!-- watched cards rendered here -->
+              </div>
+            </section>
+          </div>
+
         </main>
       </div>
     </div>
@@ -91,21 +125,16 @@
           </div>
         </div>
         <div class="suggest-actions">
-          <button
-            class="btn-icon btn-watchlist"
-            title="Add to watchlist"
-          >
+          <button class="btn-icon btn-watchlist" title="Add to watchlist">
             ☆
           </button>
-          <button
-            class="btn-icon btn-watched"
-            title="Mark as watched"
-          >
+          <button class="btn-icon btn-watched" title="Mark as watched">
             ✓
           </button>
         </div>
       </article>
     </template>
+
     <script type="module" src="sidepanel.js"></script>
   </body>
 </html>

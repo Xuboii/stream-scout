@@ -731,4 +731,52 @@ body {
   height: 24px;
 }
 
+/* Tabs header */
+
+.sp-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 0 4px;
+  margin-bottom: 10px;
+}
+
+.sp-tab-btn {
+  flex: 1;
+  font-size: 11px;
+  padding: 4px 6px;
+  border-radius: 999px;
+  border: 1px solid #1f2937;
+  background: transparent;
+  color: #9ca3af;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.sp-tab-btn.active {
+  background: #0ea5e9;
+  border-color: #0ea5e9;
+  color: #020617;
+}
+
+.sp-tab-btn:hover:not(.active) {
+  border-color: #334155;
+}
+
+/* Tab panels */
+
+.sp-tab-panel {
+  width: 100%;
+}
+
+/* List of cards in watchlist / watched tabs */
+
+.ctx-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ctx-list .ctx-card {
+  width: 100%;
+}
 

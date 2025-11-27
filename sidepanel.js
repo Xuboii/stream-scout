@@ -12,6 +12,8 @@ const state = {
   currentItem: null,
   watchKeys: new Set(),
   watchedKeys: new Set(),
+  watchItems: [],
+  watchedItems: [],
   aiSuggestions: [],
   aiLoading: false,
 };
@@ -19,6 +21,7 @@ const state = {
 // DOM refs
 const badgeEl = document.getElementById("contextBadge");
 const subtitleEl = document.getElementById("contextSubtitle");
+
 const contextCardEl = document.getElementById("contextCard");
 
 const aiPromptEl = document.getElementById("aiPrompt");
@@ -27,10 +30,20 @@ const btnAskAi = document.getElementById("btnAskAi");
 const aiEmptyEl = document.getElementById("aiEmpty");
 const aiResultsEl = document.getElementById("aiResults");
 
+const watchlistContainerEl = document.getElementById("watchlistContainer");
+const watchedContainerEl = document.getElementById("watchedContainer");
+
+const tabButtons = document.querySelectorAll(".sp-tab-btn");
+const tabPanels = {
+  search: document.getElementById("tab-search"),
+  watchlist: document.getElementById("tab-watchlist"),
+  watched: document.getElementById("tab-watched"),
+};
+
 const tplProvider = document.getElementById("provider-pill-tpl");
 const tplSuggestion = document.getElementById("suggestion-tpl");
 
-// Load membership sets
+// Membership sets
 
 async function updateMembershipSets() {
   const [watchlist, watched] = await Promise.all([
@@ -38,11 +51,13 @@ async function updateMembershipSets() {
     loadList("watched"),
   ]);
 
+  state.watchItems = watchlist;
+  state.watchedItems = watched;
   state.watchKeys = new Set(watchlist.map((x) => x.key));
   state.watchedKeys = new Set(watched.map((x) => x.key));
 }
 
-// Provider styling helper
+// Provider helpers
 
 function providerClass(name) {
   const n = name.toLowerCase();
@@ -61,7 +76,6 @@ function providerClass(name) {
 
 function renderProviderTags(container, providers) {
   container.innerHTML = "";
-
   if (!providers || !providers.length) {
     const span = document.createElement("span");
     span.className = "provider-tag";
@@ -79,7 +93,7 @@ function renderProviderTags(container, providers) {
   });
 }
 
-// Detect IMDb page in active tab
+// Context detection
 
 async function detectContextFromTab() {
   try {
@@ -87,16 +101,16 @@ async function detectContextFromTab() {
       active: true,
       currentWindow: true,
     });
-
     if (!tab || !tab.url) {
       badgeEl.textContent = "No active tab";
-      subtitleEl.textContent = "Open an IMDb title page.";
+      subtitleEl.textContent = "Open an IMDb title page to get started.";
       return null;
     }
 
     const url = tab.url;
-    const imdbMatch = url.match(/imdb\.com\/title\/(tt\d{5,10})/i);
 
+    // Basic IMDb title detection
+    const imdbMatch = url.match(/imdb\.com\/title\/(tt\d{5,10})/i);
     if (imdbMatch) {
       const imdbId = imdbMatch[1];
       badgeEl.textContent = "IMDb title detected";
@@ -110,19 +124,21 @@ async function detectContextFromTab() {
   } catch (err) {
     console.error("tabs.query failed", err);
     badgeEl.textContent = "Cannot read tab";
-    subtitleEl.textContent = "Check tab permissions.";
+    subtitleEl.textContent =
+      "Check extension permissions for tabs access.";
     return null;
   }
 }
 
-// Load item from OMDb and TMDB
+// Load current item using OMDb + TMDB
 
 async function loadItemForImdbId(imdbId) {
   try {
+    // OMDb for title metadata
     const omdb = await pget("/omdb", { i: imdbId });
 
     if (!omdb || omdb.Response === "False") {
-      renderEmptyContext("Could not load IMDb metadata.");
+      renderEmptyContext("Could not resolve this title via OMDb.");
       return;
     }
 
@@ -130,6 +146,7 @@ async function loadItemForImdbId(imdbId) {
     const year = omdb.Year || "";
     const type = omdb.Type === "series" ? "tv" : "movie";
 
+    // TMDB search to map to TMDB id
     const tmdbSearch = await pget("/tmdb_search", {
       type,
       query: title,
@@ -139,20 +156,23 @@ async function loadItemForImdbId(imdbId) {
     });
 
     const first = (tmdbSearch.results || [])[0];
-
     if (!first) {
-      renderEmptyContext("TMDB did not have this title.");
+      renderEmptyContext("No TMDB match found for this title.");
       return;
     }
 
     const tmdbId = first.id;
-    const yearField = first.release_date || first.first_air_date || year || "";
+    const yearField =
+      first.release_date || first.first_air_date || year || "";
     const yearResolved = yearField.slice(0, 4);
 
+    // Providers
     let providers = [];
-
     try {
-      const prov = await pget("/tmdb_providers", { type, id: tmdbId });
+      const prov = await pget("/tmdb_providers", {
+        type,
+        id: tmdbId,
+      });
       const us = (prov.results && prov.results[COUNTRY]) || {};
       const offers = [
         ...(us.flatrate || []),
@@ -162,7 +182,7 @@ async function loadItemForImdbId(imdbId) {
       ];
       providers = offers.map((o) => o.provider_name);
     } catch (err) {
-      console.warn("Provider fetch failed", err);
+      console.warn("providers lookup failed for", tmdbId, err);
     }
 
     const imdbRating =
@@ -186,11 +206,11 @@ async function loadItemForImdbId(imdbId) {
     renderContextCard();
   } catch (err) {
     console.error("loadItemForImdbId failed", err);
-    renderEmptyContext("Failed to load this title.");
+    renderEmptyContext("Failed to load data for this title.");
   }
 }
 
-// Empty card template
+// Rendering helpers
 
 function renderEmptyContext(message) {
   contextCardEl.classList.add("context-card-empty");
@@ -199,19 +219,14 @@ function renderEmptyContext(message) {
   `;
 }
 
-// Render context card
-
-function renderContextCard() {
-  const item = state.currentItem;
-
-  if (!item) {
-    renderEmptyContext("No supported title detected.");
-    return;
-  }
-
-  contextCardEl.classList.remove("context-card-empty");
-  contextCardEl.innerHTML = "";
-
+/**
+ * Create a context-style card for any item.
+ * Used in:
+ *  - main context card
+ *  - watchlist tab
+ *  - watched tab
+ */
+function createItemCard(item, onChange) {
   const card = document.createElement("article");
   card.className = "suggest-card ctx-card";
 
@@ -249,11 +264,18 @@ function renderContextCard() {
 
   const scoreSelect = document.createElement("select");
   scoreSelect.className = "ctx-rating-select";
-  ["N/A", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"].forEach((v) => {
+  const scoreOptions = ["N/A", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
+  scoreOptions.forEach((v) => {
     const opt = document.createElement("option");
     opt.value = v;
     opt.textContent = v;
     scoreSelect.appendChild(opt);
+  });
+  scoreSelect.value = item.score || "N/A";
+
+  scoreSelect.addEventListener("change", () => {
+    // Stored in memory only for now
+    item.score = scoreSelect.value;
   });
 
   scoreBlock.appendChild(scoreLabel);
@@ -300,32 +322,40 @@ function renderContextCard() {
   main.appendChild(providersWrap);
 
   const key = item.key;
-  const inWatchlist = state.watchKeys.has(key);
-  const inWatched = state.watchedKeys.has(key);
 
-  btnWatchlist.classList.toggle("active", inWatchlist);
-  btnWatched.classList.toggle("active", inWatched);
+  // Initial membership state
+  const isInWatchlist = state.watchKeys.has(key);
+  const isInWatched = state.watchedKeys.has(key);
 
-  btnWatchlist.title = inWatchlist ? "Remove from watchlist" : "Add to watchlist";
-  btnWatched.title = inWatched ? "Remove from watched" : "Mark as watched";
+  btnWatchlist.classList.toggle("active", isInWatchlist);
+  btnWatched.classList.toggle("active", isInWatched);
+
+  btnWatchlist.title = isInWatchlist
+    ? "Remove from watchlist"
+    : "Add to watchlist";
+  btnWatched.title = isInWatched
+    ? "Remove from watched"
+    : "Mark as watched";
 
   btnWatchlist.addEventListener("click", async (e) => {
     e.stopPropagation();
 
-    if (inWatchlist) {
+    const currentlyInWatchlist = state.watchKeys.has(key);
+    if (currentlyInWatchlist) {
       await removeFrom("watchlist", key);
     } else {
       await addTo("watchlist", item);
     }
 
     await updateMembershipSets();
-    renderContextCard();
+    if (onChange) onChange();
   });
 
   btnWatched.addEventListener("click", async (e) => {
     e.stopPropagation();
 
-    if (inWatched) {
+    const currentlyWatched = state.watchedKeys.has(key);
+    if (currentlyWatched) {
       await removeFrom("watched", key);
     } else {
       await addTo("watched", item);
@@ -333,14 +363,86 @@ function renderContextCard() {
     }
 
     await updateMembershipSets();
-    renderContextCard();
+    if (onChange) onChange();
   });
 
   card.appendChild(main);
+  return card;
+}
+
+// Context card renderer
+
+function renderContextCard() {
+  const item = state.currentItem;
+  if (!item) {
+    renderEmptyContext("No supported title detected.");
+    return;
+  }
+
+  contextCardEl.classList.remove("context-card-empty");
+  contextCardEl.innerHTML = "";
+
+  const card = createItemCard(item, () => {
+    renderContextCard();
+    renderWatchlist();
+    renderWatched();
+    renderAiResults();
+  });
+
   contextCardEl.appendChild(card);
 }
 
-// AI loading state
+// Watchlist tab renderer
+
+function renderWatchlist() {
+  if (!watchlistContainerEl) return;
+
+  watchlistContainerEl.innerHTML = "";
+
+  if (!state.watchItems.length) {
+    watchlistContainerEl.innerHTML = `
+      <p class="context-empty-text">Your watchlist is empty.</p>
+    `;
+    return;
+  }
+
+  state.watchItems.forEach((item) => {
+    const card = createItemCard(item, () => {
+      renderWatchlist();
+      renderWatched();
+      renderContextCard();
+      renderAiResults();
+    });
+    watchlistContainerEl.appendChild(card);
+  });
+}
+
+// Watched tab renderer
+
+function renderWatched() {
+  if (!watchedContainerEl) return;
+
+  watchedContainerEl.innerHTML = "";
+
+  if (!state.watchedItems.length) {
+    watchedContainerEl.innerHTML = `
+      <p class="context-empty-text">You have not marked anything as watched yet.</p>
+    `;
+    return;
+  }
+
+  state.watchedItems.forEach((item) => {
+    const card = createItemCard(item, () => {
+      renderWatched();
+      renderWatchlist();
+      renderContextCard();
+      renderAiResults();
+    });
+    watchedContainerEl.appendChild(card);
+  });
+}
+
+// AI suggestions
 
 function setAiLoading(loading) {
   state.aiLoading = loading;
@@ -351,16 +453,16 @@ function setAiLoading(loading) {
     btnAskAi.disabled = true;
     btnAskAi.classList.add("loading");
     btnAskAi.textContent = "Searching...";
+
     loadingBox.classList.remove("hidden");
   } else {
     btnAskAi.disabled = !state.currentItem;
     btnAskAi.classList.remove("loading");
     btnAskAi.textContent = "Ask AI for similar picks";
+
     loadingBox.classList.add("hidden");
   }
 }
-
-// Render AI suggestions
 
 function renderAiResults() {
   aiResultsEl.innerHTML = "";
@@ -369,7 +471,6 @@ function renderAiResults() {
     aiEmptyEl.style.display = "block";
     return;
   }
-
   aiEmptyEl.style.display = "none";
 
   state.aiSuggestions.forEach((item) => {
@@ -379,14 +480,17 @@ function renderAiResults() {
     const metaEl = node.querySelector(".s-meta");
     const scoreEl = node.querySelector(".imdb-score");
     const providersContainer = node.querySelector(".providers");
-
-    const key = item.key;
     const typeLabel = item.type === "movie" ? "Movie" : "TV";
-    const inWatchlist = state.watchKeys.has(key);
-    const inWatched = state.watchedKeys.has(key);
 
     titleEl.textContent = item.title;
-    metaEl.textContent = item.year ? `${typeLabel} • ${item.year}` : typeLabel;
+
+    const titleLink = node.querySelector(".s-title-link");
+    titleLink.href = `https://www.imdb.com/title/${item.imdbId}/`;
+    titleLink.target = "_blank";
+
+    metaEl.textContent = item.year
+      ? `${typeLabel} • ${item.year}`
+      : typeLabel;
     scoreEl.textContent = item.imdbRating || "N/A";
 
     renderProviderTags(providersContainer, item.providers || []);
@@ -394,16 +498,26 @@ function renderAiResults() {
     const btnWatchlist = node.querySelector(".btn-watchlist");
     const btnWatched = node.querySelector(".btn-watched");
 
+    const key = item.key;
+
+    const inWatchlist = state.watchKeys.has(key);
+    const inWatched = state.watchedKeys.has(key);
+
     btnWatchlist.classList.toggle("active", inWatchlist);
     btnWatched.classList.toggle("active", inWatched);
 
-    btnWatchlist.title = inWatchlist ? "Remove from watchlist" : "Add to watchlist";
-    btnWatched.title = inWatched ? "Remove from watched" : "Mark as watched";
+    btnWatchlist.title = inWatchlist
+      ? "Remove from watchlist"
+      : "Add to watchlist";
+    btnWatched.title = inWatched
+      ? "Remove from watched"
+      : "Mark as watched";
 
     btnWatchlist.addEventListener("click", async (e) => {
       e.stopPropagation();
 
-      if (inWatchlist) {
+      const currentlyInWatchlist = state.watchKeys.has(key);
+      if (currentlyInWatchlist) {
         await removeFrom("watchlist", key);
       } else {
         await addTo("watchlist", item);
@@ -411,12 +525,16 @@ function renderAiResults() {
 
       await updateMembershipSets();
       renderAiResults();
+      renderWatchlist();
+      renderWatched();
+      renderContextCard();
     });
 
     btnWatched.addEventListener("click", async (e) => {
       e.stopPropagation();
 
-      if (inWatched) {
+      const currentlyWatched = state.watchedKeys.has(key);
+      if (currentlyWatched) {
         await removeFrom("watched", key);
       } else {
         await addTo("watched", item);
@@ -425,17 +543,17 @@ function renderAiResults() {
 
       await updateMembershipSets();
       renderAiResults();
+      renderWatchlist();
+      renderWatched();
+      renderContextCard();
     });
 
     aiResultsEl.appendChild(node);
   });
 }
 
-// Ask AI
-
 async function askAiForSuggestions() {
   const baseItem = state.currentItem;
-
   if (!baseItem) {
     aiStatusEl.textContent = "No title detected.";
     return;
@@ -479,10 +597,9 @@ async function askAiForSuggestions() {
 
     await updateMembershipSets();
     renderAiResults();
-
     aiStatusEl.textContent = items.length
       ? "AI suggestions updated."
-      : "No matches found.";
+      : "AI did not find suitable matches.";
   } catch (err) {
     console.error("AI error", err);
     aiStatusEl.textContent = "AI request failed.";
@@ -491,14 +608,32 @@ async function askAiForSuggestions() {
   }
 }
 
-// Collapse button
+// Tabs
+
+function setActiveTab(name) {
+  tabButtons.forEach((btn) => {
+    const isActive = btn.dataset.tab === name;
+    btn.classList.toggle("active", isActive);
+  });
+
+  Object.entries(tabPanels).forEach(([key, panel]) => {
+    if (!panel) return;
+    panel.style.display = key === name ? "block" : "none";
+  });
+
+  if (name === "watchlist") {
+    renderWatchlist();
+  } else if (name === "watched") {
+    renderWatched();
+  }
+}
+
+// Collapsible panel
 
 const collapseBtn = document.getElementById("sp-collapse-btn");
 
 collapseBtn.addEventListener("click", () => {
-  chrome.runtime.sendMessage({
-    action: "STREAM_SCOUT_COLLAPSE_TOGGLE",
-  });
+  chrome.runtime.sendMessage({ action: "STREAM_SCOUT_COLLAPSE_TOGGLE" });
 });
 
 // Events
@@ -507,13 +642,19 @@ btnAskAi.addEventListener("click", () => {
   askAiForSuggestions();
 });
 
+tabButtons.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const tab = btn.dataset.tab;
+    setActiveTab(tab);
+  });
+});
+
 // Init
 
 (async () => {
   await updateMembershipSets();
 
   const ctx = await detectContextFromTab();
-
   if (ctx && ctx.kind === "imdb-title") {
     await loadItemForImdbId(ctx.imdbId);
   } else {
@@ -521,4 +662,5 @@ btnAskAi.addEventListener("click", () => {
   }
 
   btnAskAi.disabled = !state.currentItem;
+  setActiveTab("search");
 })();
