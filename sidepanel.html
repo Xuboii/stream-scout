@@ -30,39 +30,35 @@
             <button class="sp-tab-btn" data-tab="watched">Watched</button>
           </div>
 
-          <!-- SEARCH TAB (current behavior) -->
+          <!-- SEARCH TAB -->
           <div id="tab-search" class="sp-tab-panel" style="display: block;">
-            <!-- Context card for the title on the current page -->
+
             <section class="sp-section">
+
+              <!-- ON THIS PAGE -->
               <h2 class="sp-section-title">On this page</h2>
-              <div id="contextCard" class="context-card context-card-empty">
-                <p class="context-empty-text">
-                  No supported title detected yet.
-                </p>
-              </div>
-            </section>
-
-            <!-- AI suggestions based on current title -->
-            <section class="sp-section">
-              <div class="sp-section-header">
-                <h2 class="sp-section-title">AI suggestions</h2>
-                <div id="aiStatus" class="ai-loading hidden">
-                  <div class="dot"></div>
-                  <div class="dot"></div>
-                  <div class="dot"></div>
-                  <span class="ai-loading-text">
-                    Searching for recommendations...
-                  </span>
-                </div>
+              <div id="contextCard" class="ctx-list">
+                <!-- Context card injected here -->
               </div>
 
-              <div class="ai-controls">
+              <!-- AI SUGGESTIONS -->
+              <h2 class="sp-section-title" style="margin-top: 18px;">AI Suggestions</h2>
+
+              <div id="aiStatus" class="ai-loading hidden" style="margin-bottom: 10px;">
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <span class="ai-loading-text">Searching for recommendations...</span>
+              </div>
+
+              <div class="ai-controls" style="margin-bottom: 14px;">
                 <textarea
                   id="aiPrompt"
                   class="ai-input"
                   rows="2"
                   placeholder="Tell AI what you are in the mood for (optional)"
                 ></textarea>
+
                 <button id="btnAskAi" class="btn primary full-width">
                   🎬 Ask AI for similar picks
                 </button>
@@ -72,9 +68,14 @@
                 AI will suggest movies or shows based on the title on this page.
               </div>
 
-              <div id="aiResults" class="ai-results"></div>
+              <div id="aiResults" class="ctx-list">
+                <!-- AI cards rendered here, same format as Watchlist -->
+              </div>
+
             </section>
+
           </div>
+
 
           <!-- WATCHLIST TAB -->
           <div id="tab-watchlist" class="sp-tab-panel" style="display: none;">

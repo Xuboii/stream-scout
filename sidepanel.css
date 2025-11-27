@@ -33,10 +33,11 @@ body {
 }
 
 .sp-root {
+  padding: 10px;
   width: 100%;
   height: 100vh;
   box-sizing: border-box;
-  padding: 10px 10px 12px;
+  /* padding: 10px 10px 12px; */
   background: radial-gradient(circle at top, #0f172a, #020617);
   display: flex;
   flex-direction: column;
@@ -78,7 +79,8 @@ body {
 }
 
 .sp-main {
-  padding-right: 14px;
+  padding: 6px;
+  padding-right: 22px;
   box-sizing: border-box;
   scrollbar-gutter: stable both-edges;
   flex: 1;
@@ -114,12 +116,17 @@ body {
 
 /* Sections */
 
+/* Slightly widen the background box, centered */
 .sp-section {
-  background: rgba(15, 23, 42, 0.96);
+  width: 92%;              /* small increase, not full width */
+  margin-left: auto;
+  margin-right: auto;
+  background: rgba(2, 6, 23, 0.5);
+  border: 1px solid #0f172a;
   border-radius: 14px;
-  padding: 8px 9px 9px;
-  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.7);
+  padding: 14px 16px;
 }
+
 
 .sp-section-header {
   display: flex;
@@ -768,15 +775,36 @@ body {
   width: 100%;
 }
 
-/* List of cards in watchlist / watched tabs */
-
+/* Center cards INSIDE without increasing card width */
 .ctx-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  align-items: center;
 }
 
-.ctx-list .ctx-card {
+/* Keep original card width (not too wide) */
+.ctx-card {
+  width: 100%;
+  max-width: 420px;        /* restore original perfect size */
+}
+
+#contextCard .ctx-card,
+#aiResults .ctx-card,
+#watchlistContainer .ctx-card,
+#watchedContainer .ctx-card {
+  margin-right: 1px;
+}
+
+/* Force all suggestion cards to use the same width as context cards */
+.ai-results .suggest-card,
+#contextCard .suggest-card,
+.ctx-list .suggest-card {
   width: 100%;
 }
 
+
+#aiResults {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
