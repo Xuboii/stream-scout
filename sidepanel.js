@@ -201,6 +201,17 @@ async function loadItemForImdbId(imdbId) {
       providers,
       poster: first.poster_path ? TMDB_IMG + first.poster_path : "",
     };
+    // Inject saved score from watchlist or watched
+    const savedWatch = state.watchItems.find(x => x.key === state.currentItem.key);
+    const savedWatched = state.watchedItems.find(x => x.key === state.currentItem.key);
+
+    if (savedWatch && savedWatch.score) {
+      state.currentItem.score = savedWatch.score;
+    } else if (savedWatched && savedWatched.score) {
+      state.currentItem.score = savedWatched.score;
+    } else {
+      state.currentItem.score = "N/A"; // explicit default
+    }
 
     await updateMembershipSets();
     renderContextCard();
