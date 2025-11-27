@@ -40,3 +40,21 @@ export async function removeFrom(key, itemKey) {
   await saveList(key, next);
 }
 
+// Save score for an item across watchlist and watched
+export async function saveScore(itemKey, score) {
+  const watchlist = await loadList("watchlist");
+  const watched = await loadList("watched");
+
+  const newWatchlist = watchlist.map(x =>
+    x.key === itemKey ? { ...x, score } : x
+  );
+
+  const newWatched = watched.map(x =>
+    x.key === itemKey ? { ...x, score } : x
+  );
+
+  await chrome.storage.sync.set({
+    watchlist: newWatchlist,
+    watched: newWatched
+  });
+}

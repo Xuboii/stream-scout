@@ -1,7 +1,7 @@
 // sidepanel.js
 // AI powered contextual helper for the current page
 
-import { pget, loadList, addTo, removeFrom } from "./shared.js";
+import { pget, loadList, addTo, removeFrom, saveScore } from "./shared.js";
 
 const PROXY_URL = "http://localhost:8080";
 
@@ -273,9 +273,11 @@ function createItemCard(item, onChange) {
   });
   scoreSelect.value = item.score || "N/A";
 
-  scoreSelect.addEventListener("change", () => {
-    // Stored in memory only for now
+  scoreSelect.addEventListener("change", async () => {
     item.score = scoreSelect.value;
+    await saveScore(item.key, item.score);
+    await updateMembershipSets();
+    if (onChange) onChange();
   });
 
   scoreBlock.appendChild(scoreLabel);
@@ -474,82 +476,16 @@ function renderAiResults() {
   aiEmptyEl.style.display = "none";
 
   state.aiSuggestions.forEach((item) => {
-    const node = tplSuggestion.content.firstElementChild.cloneNode(true);
-
-    const titleEl = node.querySelector(".s-title");
-    const metaEl = node.querySelector(".s-meta");
-    const scoreEl = node.querySelector(".imdb-score");
-    const providersContainer = node.querySelector(".providers");
-    const typeLabel = item.type === "movie" ? "Movie" : "TV";
-
-    titleEl.textContent = item.title;
-
-    const titleLink = node.querySelector(".s-title-link");
-    titleLink.href = `https://www.imdb.com/title/${item.imdbId}/`;
-    titleLink.target = "_blank";
-
-    metaEl.textContent = item.year
-      ? `${typeLabel} • ${item.year}`
-      : typeLabel;
-    scoreEl.textContent = item.imdbRating || "N/A";
-
-    renderProviderTags(providersContainer, item.providers || []);
-
-    const btnWatchlist = node.querySelector(".btn-watchlist");
-    const btnWatched = node.querySelector(".btn-watched");
-
-    const key = item.key;
-
-    const inWatchlist = state.watchKeys.has(key);
-    const inWatched = state.watchedKeys.has(key);
-
-    btnWatchlist.classList.toggle("active", inWatchlist);
-    btnWatched.classList.toggle("active", inWatched);
-
-    btnWatchlist.title = inWatchlist
-      ? "Remove from watchlist"
-      : "Add to watchlist";
-    btnWatched.title = inWatched
-      ? "Remove from watched"
-      : "Mark as watched";
-
-    btnWatchlist.addEventListener("click", async (e) => {
-      e.stopPropagation();
-
-      const currentlyInWatchlist = state.watchKeys.has(key);
-      if (currentlyInWatchlist) {
-        await removeFrom("watchlist", key);
-      } else {
-        await addTo("watchlist", item);
-      }
-
-      await updateMembershipSets();
+    const card = createItemCard(item, () => {
       renderAiResults();
       renderWatchlist();
       renderWatched();
       renderContextCard();
     });
 
-    btnWatched.addEventListener("click", async (e) => {
-      e.stopPropagation();
-
-      const currentlyWatched = state.watchedKeys.has(key);
-      if (currentlyWatched) {
-        await removeFrom("watched", key);
-      } else {
-        await addTo("watched", item);
-        await removeFrom("watchlist", key);
-      }
-
-      await updateMembershipSets();
-      renderAiResults();
-      renderWatchlist();
-      renderWatched();
-      renderContextCard();
-    });
-
-    aiResultsEl.appendChild(node);
+    aiResultsEl.appendChild(card);
   });
+
 }
 
 async function askAiForSuggestions() {
