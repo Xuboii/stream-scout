@@ -502,7 +502,9 @@ body {
 /* Suggestion cards */
 
 .suggest-card {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: start;
   justify-content: space-between;
   gap: 8px;
   padding: 7px 8px;
@@ -510,11 +512,13 @@ body {
   background: linear-gradient(135deg, #020617, #020617);
   border: 1px solid rgba(15, 23, 42, 0.9);
   box-shadow: 0 3px 10px rgba(15, 23, 42, 0.8);
+  
 }
 
 .suggest-main {
   flex: 1;
   min-width: 0;
+  width: 100%;
 }
 
 .suggest-header {
@@ -631,3 +635,94 @@ body {
 .suggest-card {
   margin-right: 4px; /* small breathing room */
 }
+
+/* ===== Minimal Thin Context Layout ===== */
+
+.ctx-card .suggest-main {
+  width: 100%;
+}
+
+/* Centered title */
+.ctx-title-centered {
+  text-align: center;
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0 0 2px 0;
+  color: #f9fafb;
+}
+
+/* Centered meta */
+.ctx-meta-centered {
+  text-align: center;
+  font-size: 11px;
+  color: #9ca3af;
+  margin-bottom: 6px;
+}
+
+/* Uniform vertical score blocks */
+.ctx-score-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 6px 0 10px 0;
+}
+
+/* Tighter spacing between IMDb and Score */
+.ctx-score-group {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 8px; /* reduced from 22px */
+}
+
+/* Vertical blocks stay aligned but narrower */
+.ctx-score-vertical {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 42px;
+}
+
+/* Label */
+.ctx-score-label {
+  font-size: 10px;
+  color: #cbd5f5;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 2px;
+}
+
+/* Value */
+.ctx-score-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: #f9fafb;
+}
+
+/* Slimmer score dropdown */
+.ctx-rating-select {
+  width: 44px;       /* slimmer dropdown */
+  font-size: 11px;
+  padding: 1px 2px;  /* reduced padding for tighter look */
+  border-radius: 4px;
+  background: #020617;
+  border: 1px solid #1f2937;
+  color: #e5e7eb;
+  text-align: center;
+}
+
+/* Buttons */
+.ctx-actions-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ctx-actions-inline .btn-icon {
+  width: 24px;
+  height: 24px;
+}
+
+

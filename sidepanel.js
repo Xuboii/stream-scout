@@ -203,6 +203,8 @@ function renderEmptyContext(message) {
   `;
 }
 
+// Single, clean implementation of renderContextCard
+
 function renderContextCard() {
   const item = state.currentItem;
   if (!item) {
@@ -213,56 +215,84 @@ function renderContextCard() {
   contextCardEl.classList.remove("context-card-empty");
   contextCardEl.innerHTML = "";
 
-  // === Outer card ===
+  // Outer card
   const card = document.createElement("article");
-  card.className = "suggest-card"; // identical style to AI cards
+  card.className = "suggest-card ctx-card";
 
-  // === Left column (suggest-main) ===
+  // Main content
   const main = document.createElement("div");
   main.className = "suggest-main";
 
-  // HEADER
-  const header = document.createElement("div");
-  header.className = "suggest-header";
+  // Title
+  const titleEl = document.createElement("h2");
+  titleEl.className = "ctx-title-centered";
+  titleEl.textContent = item.title;
 
-  const titleBlock = document.createElement("div");
-  titleBlock.className = "suggest-title-block";
-
-  // TITLE LINK
-  const titleLink = document.createElement("a");
-  titleLink.className = "s-title-link";
-  titleLink.href = `https://www.imdb.com/title/${item.imdbId}/`;
-  titleLink.target = "_blank";
-  titleLink.rel = "noopener noreferrer";
-
-  const titleSpan = document.createElement("span");
-  titleSpan.className = "s-title";
-  titleSpan.textContent = item.title;
-
-  titleLink.appendChild(titleSpan);
-
-  // META
-  const meta = document.createElement("span");
-  meta.className = "s-meta";
-
+  // Meta
+  const metaEl = document.createElement("div");
+  metaEl.className = "ctx-meta-centered";
   const typeLabel = item.type === "movie" ? "Movie" : "TV";
-  meta.textContent = item.year ? `${typeLabel} • ${item.year}` : typeLabel;
+  metaEl.textContent = item.year ? `${typeLabel} • ${item.year}` : typeLabel;
 
-  titleBlock.appendChild(titleLink);
-  titleBlock.appendChild(meta);
+  // Score row
+  const scoreRow = document.createElement("div");
+  scoreRow.className = "ctx-score-row";
 
-  // IMDb PILL
-  const imdbPill = document.createElement("span");
-  imdbPill.className = "imdb-pill";
-  imdbPill.innerHTML = `
-    <span class="imdb-label">IMDb</span>
-    <span class="imdb-score">${item.imdbRating || "N/A"}</span>
+  // Score group (two vertical blocks)
+  const scoreGroup = document.createElement("div");
+  scoreGroup.className = "ctx-score-group";
+
+  // IMDb vertical block
+  const imdbBlock = document.createElement("div");
+  imdbBlock.className = "ctx-score-vertical";
+  imdbBlock.innerHTML = `
+    <div class="ctx-score-label">IMDb</div>
+    <div class="ctx-score-value">${item.imdbRating || "N/A"}</div>
   `;
 
-  header.appendChild(titleBlock);
-  header.appendChild(imdbPill);
+  // Personal rating vertical block
+  const scoreBlock = document.createElement("div");
+  scoreBlock.className = "ctx-score-vertical";
 
-  // PROVIDERS
+  const scoreLabel = document.createElement("div");
+  scoreLabel.className = "ctx-score-label";
+  scoreLabel.textContent = "Score";
+
+  const scoreSelect = document.createElement("select");
+  scoreSelect.className = "ctx-rating-select";
+  ["N/A", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"].forEach((v) => {
+    const opt = document.createElement("option");
+    opt.value = v;
+    opt.textContent = v;
+    scoreSelect.appendChild(opt);
+  });
+
+  scoreBlock.appendChild(scoreLabel);
+  scoreBlock.appendChild(scoreSelect);
+
+  scoreGroup.appendChild(imdbBlock);
+  scoreGroup.appendChild(scoreBlock);
+
+  // Actions to the right
+  const actionsInline = document.createElement("div");
+  actionsInline.className = "ctx-actions-inline";
+
+  const btnWatchlist = document.createElement("button");
+  btnWatchlist.className = "btn-icon btn-watchlist";
+  btnWatchlist.innerHTML = "☆";
+
+  const btnWatched = document.createElement("button");
+  btnWatched.className = "btn-icon btn-watched";
+  btnWatched.innerHTML = "✓";
+
+  actionsInline.appendChild(btnWatchlist);
+  actionsInline.appendChild(btnWatched);
+
+  scoreRow.appendChild(scoreGroup);
+  scoreRow.appendChild(actionsInline);
+
+
+  // Providers
   const providersWrap = document.createElement("div");
   providersWrap.className = "suggest-providers";
 
@@ -278,27 +308,16 @@ function renderContextCard() {
 
   renderProviderTags(providerContainer, item.providers);
 
-  // Append header + providers into left side
-  main.appendChild(header);
+  // Assemble main
+  main.appendChild(titleEl);
+  main.appendChild(metaEl);
+  main.appendChild(scoreRow);
   main.appendChild(providersWrap);
 
-  // === Right column (actions) ===
-  const actions = document.createElement("div");
-  actions.className = "suggest-actions";
-
-  const btnWatchlist = document.createElement("button");
-  btnWatchlist.className = "btn-icon btn-watchlist";
-  btnWatchlist.title = "Add to watchlist";
-  btnWatchlist.innerHTML = "☆";
-
-  const btnWatched = document.createElement("button");
-  btnWatched.className = "btn-icon btn-watched";
-  btnWatched.title = "Mark as watched";
-  btnWatched.innerHTML = "✓";
-
-  // Membership state
-  const inWatchlist = state.watchKeys.has(item.key);
-  const inWatched = state.watchedKeys.has(item.key);
+  // Membership state and handlers
+  const key = item.key;
+  const inWatchlist = state.watchKeys.has(key);
+  const inWatched = state.watchedKeys.has(key);
 
   if (inWatched) {
     btnWatched.classList.add("active");
@@ -308,10 +327,9 @@ function renderContextCard() {
     btnWatchlist.classList.add("active");
   }
 
-  // Button handlers
   btnWatchlist.addEventListener("click", async (e) => {
     e.stopPropagation();
-    if (inWatched) return;
+    if (state.watchedKeys.has(key)) return;
     await addTo("watchlist", item);
     await updateMembershipSets();
     renderContextCard();
@@ -319,24 +337,17 @@ function renderContextCard() {
 
   btnWatched.addEventListener("click", async (e) => {
     e.stopPropagation();
-    if (inWatched) return;
+    if (state.watchedKeys.has(key)) return;
     await addTo("watched", item);
-    await removeFrom("watchlist", item.key);
+    await removeFrom("watchlist", key);
     await updateMembershipSets();
     renderContextCard();
   });
 
-  actions.appendChild(btnWatchlist);
-  actions.appendChild(btnWatched);
-
-  // === Assemble card ===
+  // Final assemble
   card.appendChild(main);
-  card.appendChild(actions);
-
-  // Insert final card
   contextCardEl.appendChild(card);
 }
-
 
 // AI suggestions
 
@@ -359,7 +370,6 @@ function setAiLoading(loading) {
     loadingBox.classList.add("hidden");
   }
 }
-
 
 function renderAiResults() {
   aiResultsEl.innerHTML = "";
@@ -434,7 +444,7 @@ async function askAiForSuggestions() {
   }
 
   setAiLoading(true);
-  aiResultsEl.innerHTML = "";  
+  aiResultsEl.innerHTML = "";
   aiEmptyEl.style.display = "none";
   aiStatusEl.textContent = "";
 
@@ -459,12 +469,9 @@ async function askAiForSuggestions() {
     }
 
     const json = await res.json();
-    // Expected response shape:
-    // { items: [{ key, title, year, type, imdbRating, providers }] }
     const items = json.items || [];
 
     state.aiSuggestions = items.map((it) => {
-      // Ensure there is a key
       if (!it.key) {
         const type = it.type === "tv" ? "tv" : "movie";
         it.key = `${type}:${it.tmdbId || it.title}`;
@@ -485,13 +492,13 @@ async function askAiForSuggestions() {
   }
 }
 
-// --- Collapsible panel ---
+// Collapsible panel
+
 const collapseBtn = document.getElementById("sp-collapse-btn");
 
 collapseBtn.addEventListener("click", () => {
   chrome.runtime.sendMessage({ action: "STREAM_SCOUT_COLLAPSE_TOGGLE" });
 });
-
 
 // Events
 
@@ -511,6 +518,5 @@ btnAskAi.addEventListener("click", () => {
     renderEmptyContext("Open an IMDb title page to see details here.");
   }
 
-  // If we do not have a current item, AI button stays disabled
   btnAskAi.disabled = !state.currentItem;
 })();
