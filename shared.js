@@ -160,7 +160,19 @@ export function createItemCard(item, handlers = {}) {
 
   const titleEl = document.createElement("h2");
   titleEl.className = "ctx-title-centered";
-  titleEl.textContent = item.title;
+
+  if (item.imdbId) {
+    const link = document.createElement("a");
+    link.href = `https://www.imdb.com/title/${item.imdbId}/`;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.textContent = item.title;
+    link.className = "s-title-link"; // already defined in sidepanel.css
+    titleEl.appendChild(link);
+  } else {
+    titleEl.textContent = item.title;
+  }
+
 
   const metaEl = document.createElement("div");
   metaEl.className = "ctx-meta-centered";

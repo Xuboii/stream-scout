@@ -515,3 +515,13 @@ body::-webkit-scrollbar-thumb {
 body::-webkit-scrollbar-track {
   background: transparent;
 }
+
+.s-title-link {
+  color: #f9fafb;
+  text-decoration: none;
+}
+
+.s-title-link:hover {
+  text-decoration: underline;
+  color: #93c5fd;
+}
