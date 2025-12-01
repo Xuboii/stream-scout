@@ -21,7 +21,7 @@ if (!TMDB_V4) console.warn("Missing TMDB_V4_TOKEN!");
 
 const TMDB_HEADERS = {
   Authorization: `Bearer ${TMDB_V4}`,
-  "Content-Type": "application/json;charset=utf-8"
+  "Content-Type": "application/json;charset=utf-8",
 };
 
 /* -----------------------------
@@ -32,19 +32,38 @@ app.get("/omdb", async (req, res) => {
     "https://www.omdbapi.com/?" +
     new URLSearchParams({
       apikey: OMDB,
-      ...req.query
+      ...req.query,
     });
 
   console.log("OMDb request:", url);
 
   try {
     const r = await fetch(url);
-    res.json(await r.json());
+    const text = await r.text();
+
+    // If OMDb returned HTML, error page, or anything not JSON
+    // Common HTML error pages start with "<"
+    if (!text.trim().startsWith("{")) {
+      console.warn("OMDb returned non JSON:", text.slice(0, 200));
+      return res.json({
+        Response: "False",
+        Error: "OMDb returned invalid response",
+      });
+    }
+
+    // Now we safely parse
+    const json = JSON.parse(text);
+    return res.json(json);
+
   } catch (err) {
     console.error("OMDb error:", err);
-    res.status(500).json({ error: "OMDb request failed" });
+    return res.json({
+      Response: "False",
+      Error: "OMDb request failed",
+    });
   }
 });
+
 
 /* -----------------------------
    TMDB genres
@@ -66,7 +85,7 @@ app.get("/tmdb_genres", async (req, res) => {
 });
 
 /* -----------------------------
-   TMDB search
+   TMDB search (title search)
 ------------------------------ */
 app.get("/tmdb_search", async (req, res) => {
   try {
@@ -85,6 +104,49 @@ app.get("/tmdb_search", async (req, res) => {
   } catch (err) {
     console.error("TMDB search error:", err);
     res.status(500).json({ error: "TMDB search failed" });
+  }
+});
+
+/* -----------------------------
+   TMDB discover (top rated / filter only searches)
+------------------------------ */
+app.get("/tmdb_discover", async (req, res) => {
+  try {
+    const type = req.query.type === "tv" ? "tv" : "movie";
+
+    const url = new URL(`https://api.themoviedb.org/3/discover/${type}`);
+    url.searchParams.set("language", "en-US");
+    url.searchParams.set("include_adult", "false");
+    url.searchParams.set("page", req.query.page || "1");
+    url.searchParams.set("sort_by", req.query.sort_by || "vote_average.desc");
+
+    if (req.query.with_genres) {
+      url.searchParams.set("with_genres", req.query.with_genres);
+    }
+
+    if (req.query.vote_average_gte) {
+      url.searchParams.set("vote_average.gte", req.query.vote_average_gte);
+    }
+
+    if (req.query.vote_count_gte) {
+      url.searchParams.set("vote_count.gte", req.query.vote_count_gte);
+    }
+
+    if (req.query.with_watch_providers) {
+      url.searchParams.set(
+        "with_watch_providers",
+        req.query.with_watch_providers
+      );
+      url.searchParams.set("watch_region", req.query.watch_region || "US");
+    }
+
+    console.log("TMDB discover request:", url.toString());
+
+    const r = await fetch(url.toString(), { headers: TMDB_HEADERS });
+    res.json(await r.json());
+  } catch (err) {
+    console.error("TMDB discover error:", err);
+    res.status(500).json({ error: "TMDB discover failed" });
   }
 });
 
@@ -128,6 +190,9 @@ app.get("/tmdb_providers", async (req, res) => {
   }
 });
 
+/* -----------------------------
+   AI recommend
+------------------------------ */
 app.post("/ai_recommend", async (req, res) => {
   try {
     const { title, year, type, mood } = req.body;
@@ -138,7 +203,9 @@ app.post("/ai_recommend", async (req, res) => {
       : `${title} (${year})`;
 
     const prompt = `
-You are a movie expert. Suggest exactly 10 real ${type === "tv" ? "TV shows" : "movies"} similar to: 
+You are a movie expert. Suggest exactly 10 real ${
+      type === "tv" ? "TV shows" : "movies"
+    } similar to: 
 "${title}" (${year}). Consider tone, pacing, theme, genre, and audience.
 
 Mood or user preference: "${userMood}"
@@ -153,13 +220,13 @@ Return ONLY a strict JSON array, with no backticks, no code fences, no explanati
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
         model: "gpt-4o-mini",
         messages: [{ role: "user", content: prompt }],
-        max_tokens: 800
-      })
+        max_tokens: 800,
+      }),
     });
 
     const data = await r.json();
@@ -185,12 +252,11 @@ Return ONLY a strict JSON array, with no backticks, no code fences, no explanati
       return res.json({ items: [] });
     }
 
-    // Prevent hallucinations
     if (!Array.isArray(parsed)) {
       return res.json({ items: [] });
     }
 
-    // Convert results into full StreamScout format
+    // Convert results into full Stream Scout format
     const finalItems = [];
 
     for (const entry of parsed) {
@@ -200,7 +266,7 @@ Return ONLY a strict JSON array, with no backticks, no code fences, no explanati
         "https://www.omdbapi.com/?" +
         new URLSearchParams({
           apikey: OMDB,
-          i: entry.imdbId
+          i: entry.imdbId,
         });
 
       const omdb = await fetch(omdbURL).then((r) => r.json());
@@ -217,7 +283,7 @@ Return ONLY a strict JSON array, with no backticks, no code fences, no explanati
       searchURL.searchParams.set("page", "1");
 
       const tmdbSearch = await fetch(searchURL, {
-        headers: TMDB_HEADERS
+        headers: TMDB_HEADERS,
       }).then((r) => r.json());
 
       const match = tmdbSearch.results?.[0];
@@ -230,14 +296,14 @@ Return ONLY a strict JSON array, with no backticks, no code fences, no explanati
       try {
         const provURL = `https://api.themoviedb.org/3/${tmdbType}/${tmdbId}/watch/providers`;
         const prov = await fetch(provURL, {
-          headers: TMDB_HEADERS
+          headers: TMDB_HEADERS,
         }).then((r) => r.json());
         const us = prov.results?.US || {};
         const offers = [
           ...(us.flatrate || []),
           ...(us.ads || []),
           ...(us.rent || []),
-          ...(us.buy || [])
+          ...(us.buy || []),
         ];
         providers = offers.map((o) => o.provider_name);
       } catch {}
@@ -253,7 +319,7 @@ Return ONLY a strict JSON array, with no backticks, no code fences, no explanati
           omdb.imdbRating && omdb.imdbRating !== "N/A"
             ? omdb.imdbRating
             : null,
-        providers
+        providers,
       });
     }
 
@@ -264,10 +330,6 @@ Return ONLY a strict JSON array, with no backticks, no code fences, no explanati
   }
 });
 
-
-
 app.listen(PORT, () => {
   console.log(`Stream Scout Proxy running at http://localhost:${PORT}`);
 });
-
-

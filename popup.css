@@ -15,6 +15,7 @@ body {
   padding: 8px 10px 10px;
   box-sizing: border-box;
   background: radial-gradient(circle at top, #0f172a, #020617);
+  overflow-x: hidden !important;
 }
 
 .header {
@@ -103,7 +104,8 @@ body {
 }
 
 input[type="text"],
-select {
+select,
+textarea {
   width: 100%;
   font-size: 12px;
   padding: 4px 7px;
@@ -112,10 +114,12 @@ select {
   background: #020617;
   color: #e5e7eb;
   outline: none;
+  box-sizing: border-box;
 }
 
 input[type="text"]:focus,
-select:focus {
+select:focus,
+textarea:focus {
   border-color: #38bdf8;
 }
 
@@ -143,6 +147,21 @@ select:focus {
   background: linear-gradient(135deg, #2563eb, #0ea5e9);
   color: #f9fafb;
   box-shadow: 0 4px 14px rgba(37, 99, 235, 0.6);
+}
+
+.btn.subtle {
+  background: #020617;
+  border: 1px solid #1f2937;
+  color: #e5e7eb;
+}
+
+.btn.subtle:hover {
+  background: #111827;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .search-btn {
@@ -192,6 +211,27 @@ select:focus {
   padding: 4px 2px;
 }
 
+/* Pagination controls under results */
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.pagination.hidden {
+  display: none;
+}
+
+.page-info {
+  min-width: 90px;
+  text-align: center;
+}
+
 /* ====================== PROVIDER TAGS ============================ */
 
 .provider-tag {
@@ -202,8 +242,6 @@ select:focus {
   color: #e5e7eb;
   white-space: nowrap;
 }
-
-/* Color classes stay unchanged (Netflix, Prime, etc.) */
 
 /* ====================== ICON BUTTONS ============================= */
 
@@ -245,16 +283,19 @@ select:focus {
 }
 
 /* ==========================================================
-   NEW — CTX-CARD DESIGN (MATCH SIDEPANEL)
+   NEW - CTX CARD DESIGN (MATCH SIDEPANEL)
    ========================================================== */
 
 .ctx-card {
-  width: 100%;
+  width: calc(100% - 20px) !important;
+  max-width: 380px !important;
   background: rgba(15, 23, 42, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 18px;
   padding: 18px 20px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  margin: 0 auto !important;
+  box-sizing: border-box;
 }
 
 /* Title & Meta */
@@ -271,7 +312,7 @@ select:focus {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 46px; /* identical to sidepanel */
+  gap: 46px;
 }
 
 .ctx-score-group {
@@ -288,8 +329,12 @@ select:focus {
 
 /* Score dropdown size */
 .ctx-rating-select {
-  width: 70px;
-  max-width: 70px;
+  width: 48px !important;
+  max-width: 48px !important;
+  padding: 2px 4px !important;
+  font-size: 11px !important;
+  height: 18px !important;
+  border-radius: 6px !important;
 }
 
 /* Watchlist / Watched buttons */
@@ -315,22 +360,9 @@ select:focus {
   gap: 6px;
 }
 
-/* Make Recommended tab consistent */
+/* Recommended tab consistency */
 #tabRecommendedPanel .ctx-card {
   margin-top: 10px;
-}
-
-/* Prevent horizontal scrolling in popup */
-.popup {
-  overflow-x: hidden !important;
-}
-
-/* Force ctx-cards to fit within popup width */
-.ctx-card {
-  width: calc(100% - 20px) !important; /* keeps spacing, avoids overflow */
-  max-width: 380px !important;         /* fits inside 420px popup safely */
-  margin: 0 auto !important;           /* center card */
-  box-sizing: border-box;
 }
 
 /* Ensure internal elements never push width */
@@ -405,15 +437,6 @@ select:focus {
   border: 1px solid rgba(248, 113, 113, 0.7);
 }
 
-/* Make SCORE dropdown slimmer in popup */
-.ctx-rating-select {
-  width: 48px !important;       /* was ~72px before */
-  padding: 2px 4px !important;  /* reduces height a bit */
-  font-size: 11px !important;   /* slightly smaller font for balance */
-  height: 18px !important;      /* shorter box */
-  border-radius: 6px !important; /* slightly tighter rounding */
-}
-
 /******************************
   POPUP LOADING INDICATOR
 *******************************/
@@ -451,7 +474,9 @@ select:focus {
 }
 
 @keyframes popupDot {
-  0%, 80%, 100% {
+  0%,
+  80%,
+  100% {
     transform: scale(0);
   }
   40% {
@@ -490,4 +515,3 @@ body::-webkit-scrollbar-thumb {
 body::-webkit-scrollbar-track {
   background: transparent;
 }
-

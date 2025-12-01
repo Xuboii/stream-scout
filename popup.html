@@ -14,7 +14,7 @@
           <button id="tabSearch" class="tab active">Search</button>
           <button id="tabWatchlist" class="tab">Watchlist</button>
           <button id="tabWatched" class="tab">Watched</button>
-          <button id="tabRecommended" class ="tab">Recommended</button>
+          <button id="tabRecommended" class="tab">Recommended</button>
         </nav>
       </header>
 
@@ -89,7 +89,9 @@
           </div>
         </div>
       </section>
-      <section id="recControls" class="controls" style="display:none;">
+
+      <!-- Recommended tab controls -->
+      <section id="recControls" class="controls" style="display: none;">
         <p class="field-label">Smart recommendations</p>
         <p class="helper-text">
           We will look at titles you have already watched and the scores you gave
@@ -120,11 +122,21 @@
           <div class="dot"></div>
           <span class="popup-loading-text">Searching...</span>
         </div>
+
         <div id="popupMainArea">
           <div id="results" class="results"></div>
+
+          <!-- New pagination controls for search tab -->
+          <div id="pagination" class="pagination hidden">
+            <button id="prevPage" class="btn subtle">&lt;</button>
+            <span id="pageInfo" class="page-info">Page 1 of 1</span>
+            <button id="nextPage" class="btn subtle">&gt;</button>
+          </div>
         </div>
+
         <div id="emptyState" class="empty">
-          Start by typing a title and pressing Search, or open your Watchlist.
+          Click Search to see top rated picks, or type a title and press Search.
+          You can also open your Watchlist.
         </div>
       </section>
     </div>
