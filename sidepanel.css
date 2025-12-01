@@ -236,6 +236,13 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
+  justify-content: center !important; /* NEW */
+}
+
+.providers-label {
+  text-align: center !important;
+  width: 100%;
+  display: block;
 }
 
 .provider-tag {

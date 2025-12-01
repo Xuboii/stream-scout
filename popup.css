@@ -458,3 +458,36 @@ select:focus {
     transform: scale(1);
   }
 }
+
+/* Dark scrollbar to match sidepanel */
+.results::-webkit-scrollbar {
+  width: 8px;
+}
+
+.results::-webkit-scrollbar-track {
+  background: #0a1224;
+}
+
+.results::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 8px;
+}
+
+.results::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+/* Popup scrollbar match sidepanel */
+body::-webkit-scrollbar {
+  width: 6px;
+}
+
+body::-webkit-scrollbar-thumb {
+  background: #111827;
+  border-radius: 999px;
+}
+
+body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
