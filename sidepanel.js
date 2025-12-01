@@ -1,19 +1,26 @@
 // sidepanel.js
 // AI powered contextual helper for the current page
 
-import { pget, loadList, addTo, removeFrom, saveScore } from "./shared.js";
-
-const PROXY_URL = "http://localhost:8080";
+import {
+  PROXY_URL,
+  pget,
+  loadList,
+  addTo,
+  removeFrom,
+  saveScore,
+  normalizeItem,
+  createItemCard,
+} from "./shared.js";
 
 const TMDB_IMG = "https://image.tmdb.org/t/p/w185";
 const COUNTRY = "US";
 
 const state = {
   currentItem: null,
-  watchKeys: new Set(),
-  watchedKeys: new Set(),
   watchItems: [],
   watchedItems: [],
+  watchKeys: new Set(),
+  watchedKeys: new Set(),
   aiSuggestions: [],
   aiLoading: false,
 };
@@ -55,42 +62,6 @@ async function updateMembershipSets() {
   state.watchedItems = watched;
   state.watchKeys = new Set(watchlist.map((x) => x.key));
   state.watchedKeys = new Set(watched.map((x) => x.key));
-}
-
-// Provider helpers
-
-function providerClass(name) {
-  const n = name.toLowerCase();
-  if (n.includes("netflix")) return "provider-netflix";
-  if (n.includes("prime") || n.includes("amazon")) return "provider-prime";
-  if (n.includes("hulu")) return "provider-hulu";
-  if (n.includes("disney")) return "provider-disney";
-  if (n.includes("crunchy")) return "provider-crunchyroll";
-  if (n.includes("hbo") || n.includes("max")) return "provider-max";
-  if (n.includes("apple")) return "provider-apple";
-  if (n.includes("paramount")) return "provider-paramount";
-  if (n.includes("peacock")) return "provider-peacock";
-  if (n.includes("youtube")) return "provider-youtube";
-  return "";
-}
-
-function renderProviderTags(container, providers) {
-  container.innerHTML = "";
-  if (!providers || !providers.length) {
-    const span = document.createElement("span");
-    span.className = "provider-tag";
-    span.textContent = "No providers found";
-    container.appendChild(span);
-    return;
-  }
-
-  providers.slice(0, 8).forEach((p) => {
-    const node = tplProvider.content.firstElementChild.cloneNode(true);
-    node.textContent = p;
-    const cls = providerClass(p);
-    if (cls) node.classList.add(cls);
-    container.appendChild(node);
-  });
 }
 
 // Context detection
@@ -190,7 +161,7 @@ async function loadItemForImdbId(imdbId) {
         ? omdb.imdbRating
         : null;
 
-    state.currentItem = {
+    let item = normalizeItem({
       key: `${type}:${tmdbId}`,
       tmdbId,
       imdbId,
@@ -200,21 +171,22 @@ async function loadItemForImdbId(imdbId) {
       imdbRating,
       providers,
       poster: first.poster_path ? TMDB_IMG + first.poster_path : "",
-    };
-    // Inject saved score from watchlist or watched
-    const savedWatch = state.watchItems.find(x => x.key === state.currentItem.key);
-    const savedWatched = state.watchedItems.find(x => x.key === state.currentItem.key);
-
-    if (savedWatch && savedWatch.score) {
-      state.currentItem.score = savedWatch.score;
-    } else if (savedWatched && savedWatched.score) {
-      state.currentItem.score = savedWatched.score;
-    } else {
-      state.currentItem.score = "N/A"; // explicit default
-    }
+    });
 
     await updateMembershipSets();
+
+    // If we have a stored score in watchlist/watched, reuse it
+    const stored =
+      state.watchItems.find((x) => x.key === item.key) ||
+      state.watchedItems.find((x) => x.key === item.key);
+
+    if (stored && stored.score) {
+      item.score = stored.score;
+    }
+
+    state.currentItem = item;
     renderContextCard();
+    btnAskAi.disabled = false;
   } catch (err) {
     console.error("loadItemForImdbId failed", err);
     renderEmptyContext("Failed to load data for this title.");
@@ -230,159 +202,6 @@ function renderEmptyContext(message) {
   `;
 }
 
-/**
- * Create a context-style card for any item.
- * Used in:
- *  - main context card
- *  - watchlist tab
- *  - watched tab
- */
-function createItemCard(item, onChange) {
-  const card = document.createElement("article");
-  card.className = "suggest-card ctx-card";
-
-  const main = document.createElement("div");
-  main.className = "suggest-main";
-
-  const titleEl = document.createElement("h2");
-  titleEl.className = "ctx-title-centered";
-  titleEl.textContent = item.title;
-
-  const metaEl = document.createElement("div");
-  metaEl.className = "ctx-meta-centered";
-  const typeLabel = item.type === "movie" ? "Movie" : "TV";
-  metaEl.textContent = item.year ? `${typeLabel} • ${item.year}` : typeLabel;
-
-  const scoreRow = document.createElement("div");
-  scoreRow.className = "ctx-score-row";
-
-  const scoreGroup = document.createElement("div");
-  scoreGroup.className = "ctx-score-group";
-
-  const imdbBlock = document.createElement("div");
-  imdbBlock.className = "ctx-score-vertical";
-  imdbBlock.innerHTML = `
-    <div class="ctx-score-label">IMDb</div>
-    <div class="ctx-score-value">${item.imdbRating || "N/A"}</div>
-  `;
-
-  const scoreBlock = document.createElement("div");
-  scoreBlock.className = "ctx-score-vertical";
-
-  const scoreLabel = document.createElement("div");
-  scoreLabel.className = "ctx-score-label";
-  scoreLabel.textContent = "Score";
-
-  const scoreSelect = document.createElement("select");
-  scoreSelect.className = "ctx-rating-select";
-  const scoreOptions = ["N/A", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
-  scoreOptions.forEach((v) => {
-    const opt = document.createElement("option");
-    opt.value = v;
-    opt.textContent = v;
-    scoreSelect.appendChild(opt);
-  });
-  scoreSelect.value = item.score || "N/A";
-
-  scoreSelect.addEventListener("change", async () => {
-    item.score = scoreSelect.value;
-    await saveScore(item.key, item.score);
-    await updateMembershipSets();
-    if (onChange) onChange();
-  });
-
-  scoreBlock.appendChild(scoreLabel);
-  scoreBlock.appendChild(scoreSelect);
-
-  scoreGroup.appendChild(imdbBlock);
-  scoreGroup.appendChild(scoreBlock);
-
-  const actionsInline = document.createElement("div");
-  actionsInline.className = "ctx-actions-inline";
-
-  const btnWatchlist = document.createElement("button");
-  btnWatchlist.className = "btn-icon btn-watchlist";
-  btnWatchlist.innerHTML = "☆";
-
-  const btnWatched = document.createElement("button");
-  btnWatched.className = "btn-icon btn-watched";
-  btnWatched.innerHTML = "✓";
-
-  actionsInline.appendChild(btnWatchlist);
-  actionsInline.appendChild(btnWatched);
-
-  scoreRow.appendChild(scoreGroup);
-  scoreRow.appendChild(actionsInline);
-
-  const providersWrap = document.createElement("div");
-  providersWrap.className = "suggest-providers";
-
-  const providerLabel = document.createElement("span");
-  providerLabel.className = "providers-label";
-  providerLabel.textContent = "Available on";
-
-  const providerContainer = document.createElement("div");
-  providerContainer.className = "providers";
-
-  providersWrap.appendChild(providerLabel);
-  providersWrap.appendChild(providerContainer);
-
-  renderProviderTags(providerContainer, item.providers);
-
-  main.appendChild(titleEl);
-  main.appendChild(metaEl);
-  main.appendChild(scoreRow);
-  main.appendChild(providersWrap);
-
-  const key = item.key;
-
-  // Initial membership state
-  const isInWatchlist = state.watchKeys.has(key);
-  const isInWatched = state.watchedKeys.has(key);
-
-  btnWatchlist.classList.toggle("active", isInWatchlist);
-  btnWatched.classList.toggle("active", isInWatched);
-
-  btnWatchlist.title = isInWatchlist
-    ? "Remove from watchlist"
-    : "Add to watchlist";
-  btnWatched.title = isInWatched
-    ? "Remove from watched"
-    : "Mark as watched";
-
-  btnWatchlist.addEventListener("click", async (e) => {
-    e.stopPropagation();
-
-    const currentlyInWatchlist = state.watchKeys.has(key);
-    if (currentlyInWatchlist) {
-      await removeFrom("watchlist", key);
-    } else {
-      await addTo("watchlist", item);
-    }
-
-    await updateMembershipSets();
-    if (onChange) onChange();
-  });
-
-  btnWatched.addEventListener("click", async (e) => {
-    e.stopPropagation();
-
-    const currentlyWatched = state.watchedKeys.has(key);
-    if (currentlyWatched) {
-      await removeFrom("watched", key);
-    } else {
-      await addTo("watched", item);
-      await removeFrom("watchlist", key);
-    }
-
-    await updateMembershipSets();
-    if (onChange) onChange();
-  });
-
-  card.appendChild(main);
-  return card;
-}
-
 // Context card renderer
 
 function renderContextCard() {
@@ -395,11 +214,40 @@ function renderContextCard() {
   contextCardEl.classList.remove("context-card-empty");
   contextCardEl.innerHTML = "";
 
-  const card = createItemCard(item, () => {
-    renderContextCard();
-    renderWatchlist();
-    renderWatched();
-    renderAiResults();
+  const key = item.key;
+
+  const card = createItemCard(item, {
+    isInWatchlist: state.watchKeys.has(key),
+    isInWatched: state.watchedKeys.has(key),
+
+    onToggleWatchlist: async () => {
+      if (state.watchKeys.has(key)) {
+        await removeFrom("watchlist", key);
+      } else {
+        await addTo("watchlist", item);
+      }
+      await updateMembershipSets();
+      renderContextCard();
+      renderAiResults();
+    },
+
+    onToggleWatched: async () => {
+      if (state.watchedKeys.has(key)) {
+        await removeFrom("watched", key);
+      } else {
+        await addTo("watched", item);
+        await removeFrom("watchlist", key);
+      }
+      await updateMembershipSets();
+      renderContextCard();
+      renderAiResults();
+    },
+
+    onScoreChange: async (newScore) => {
+      item.score = newScore;
+      await saveScore(key, newScore);
+      await updateMembershipSets();
+    },
   });
 
   contextCardEl.appendChild(card);
@@ -419,13 +267,52 @@ function renderWatchlist() {
     return;
   }
 
-  state.watchItems.forEach((item) => {
-    const card = createItemCard(item, () => {
-      renderWatchlist();
-      renderWatched();
-      renderContextCard();
-      renderAiResults();
+  state.watchItems.forEach((raw) => {
+    const item = normalizeItem(raw);
+    const key = item.key;
+
+    const card = createItemCard(item, {
+      isInWatchlist: state.watchKeys.has(key),
+      isInWatched: state.watchedKeys.has(key),
+
+      onToggleWatchlist: async () => {
+        if (state.watchKeys.has(key)) {
+          await removeFrom("watchlist", key);
+        } else {
+          await addTo("watchlist", item);
+        }
+        await updateMembershipSets();
+        renderWatchlist();
+        renderWatched();
+        renderContextCard();
+        renderAiResults();
+      },
+
+      onToggleWatched: async () => {
+        if (state.watchedKeys.has(key)) {
+          await removeFrom("watched", key);
+        } else {
+          await addTo("watched", item);
+          await removeFrom("watchlist", key);
+        }
+        await updateMembershipSets();
+        renderWatchlist();
+        renderWatched();
+        renderContextCard();
+        renderAiResults();
+      },
+
+      onScoreChange: async (newScore) => {
+        item.score = newScore;
+        await saveScore(key, newScore);
+        await updateMembershipSets();
+        renderWatchlist();
+        renderWatched();
+        renderContextCard();
+        renderAiResults();
+      },
     });
+
     watchlistContainerEl.appendChild(card);
   });
 }
@@ -444,13 +331,52 @@ function renderWatched() {
     return;
   }
 
-  state.watchedItems.forEach((item) => {
-    const card = createItemCard(item, () => {
-      renderWatched();
-      renderWatchlist();
-      renderContextCard();
-      renderAiResults();
+  state.watchedItems.forEach((raw) => {
+    const item = normalizeItem(raw);
+    const key = item.key;
+
+    const card = createItemCard(item, {
+      isInWatchlist: state.watchKeys.has(key),
+      isInWatched: state.watchedKeys.has(key),
+
+      onToggleWatchlist: async () => {
+        if (state.watchKeys.has(key)) {
+          await removeFrom("watchlist", key);
+        } else {
+          await addTo("watchlist", item);
+        }
+        await updateMembershipSets();
+        renderWatched();
+        renderWatchlist();
+        renderContextCard();
+        renderAiResults();
+      },
+
+      onToggleWatched: async () => {
+        if (state.watchedKeys.has(key)) {
+          await removeFrom("watched", key);
+        } else {
+          await addTo("watched", item);
+          await removeFrom("watchlist", key);
+        }
+        await updateMembershipSets();
+        renderWatched();
+        renderWatchlist();
+        renderContextCard();
+        renderAiResults();
+      },
+
+      onScoreChange: async (newScore) => {
+        item.score = newScore;
+        await saveScore(key, newScore);
+        await updateMembershipSets();
+        renderWatched();
+        renderWatchlist();
+        renderContextCard();
+        renderAiResults();
+      },
     });
+
     watchedContainerEl.appendChild(card);
   });
 }
@@ -486,17 +412,50 @@ function renderAiResults() {
   }
   aiEmptyEl.style.display = "none";
 
-  state.aiSuggestions.forEach((item) => {
-    const card = createItemCard(item, () => {
-      renderAiResults();
-      renderWatchlist();
-      renderWatched();
-      renderContextCard();
+  state.aiSuggestions.forEach((raw) => {
+    const item = normalizeItem(raw);
+    const key = item.key;
+
+    const card = createItemCard(item, {
+      isInWatchlist: state.watchKeys.has(key),
+      isInWatched: state.watchedKeys.has(key),
+
+      onToggleWatchlist: async () => {
+        if (state.watchKeys.has(key)) {
+          await removeFrom("watchlist", key);
+        } else {
+          await addTo("watchlist", item);
+        }
+        await updateMembershipSets();
+        renderAiResults();
+        if (state.currentItem && state.currentItem.key === key) {
+          renderContextCard();
+        }
+      },
+
+      onToggleWatched: async () => {
+        if (state.watchedKeys.has(key)) {
+          await removeFrom("watched", key);
+        } else {
+          await addTo("watched", item);
+          await removeFrom("watchlist", key);
+        }
+        await updateMembershipSets();
+        renderAiResults();
+        if (state.currentItem && state.currentItem.key === key) {
+          renderContextCard();
+        }
+      },
+
+      onScoreChange: async (newScore) => {
+        item.score = newScore;
+        await saveScore(key, newScore);
+        await updateMembershipSets();
+      },
     });
 
     aiResultsEl.appendChild(card);
   });
-
 }
 
 async function askAiForSuggestions() {

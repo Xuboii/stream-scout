@@ -1,11 +1,10 @@
-/* FILE: popup.css */
-
-/* Basic layout */
+/* ==========================================================
+   ORIGINAL POPUP LAYOUT (UNCHANGED)
+   ========================================================== */
 
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   background: #020617;
   color: #e5e7eb;
 }
@@ -51,7 +50,7 @@ body {
   color: #f9fafb;
 }
 
-/* Controls */
+/* =========================== CONTROLS ============================ */
 
 .controls {
   background: rgba(15, 23, 42, 0.96);
@@ -82,7 +81,7 @@ body {
 
 .filters-row {
   display: grid;
-  grid-template-columns: 2fr 2fr 1fr; /* 40 / 40 / 20 */
+  grid-template-columns: 2fr 2fr 1fr; /* 40 40 20 */
   gap: 10px;
   align-items: flex-start;
 }
@@ -167,7 +166,7 @@ select:focus {
   background: #111827;
 }
 
-/* Content and results */
+/* ====================== CONTENT + RESULTS ======================= */
 
 .content {
   position: relative;
@@ -183,7 +182,7 @@ select:focus {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 14px;
   padding-right: 4px;
 }
 
@@ -193,92 +192,7 @@ select:focus {
   padding: 4px 2px;
 }
 
-/* Result cards */
-
-.result-card {
-  position: relative;
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 8px 10px 9px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #020617, #020617);
-  border: 1px solid rgba(15, 23, 42, 0.9);
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.8);
-  cursor: default;
-}
-
-.card-main {
-  flex: 1;
-  min-width: 0;
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 6px;
-}
-
-.card-title-block {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.result-card .title {
-  font-size: 13px;
-  font-weight: 600;
-  color: #f9fafb;
-}
-
-.year-type {
-  font-size: 11px;
-  color: #9ca3af;
-}
-
-/* IMDb pill */
-
-.imdb-pill {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 2px 7px;
-  border-radius: 999px;
-  background: #facc15;
-  color: #111827;
-  font-size: 10px;
-  min-width: 46px;
-}
-
-.imdb-label {
-  font-weight: 600;
-  letter-spacing: 0.03em;
-}
-
-.imdb-score {
-  font-weight: 700;
-}
-
-/* Providers */
-
-.card-providers {
-  margin-top: 2px;
-}
-
-.providers-label {
-  font-size: 10px;
-  color: #64748b;
-  display: block;
-  margin-bottom: 2px;
-}
-
-.providers {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
+/* ====================== PROVIDER TAGS ============================ */
 
 .provider-tag {
   font-size: 10px;
@@ -289,77 +203,9 @@ select:focus {
   white-space: nowrap;
 }
 
-/* Provider color variations */
+/* Color classes stay unchanged (Netflix, Prime, etc.) */
 
-.provider-netflix {
-  background: rgba(220, 38, 38, 0.2);
-  color: #fecaca;
-  border: 1px solid rgba(248, 113, 113, 0.7);
-}
-
-.provider-prime {
-  background: rgba(56, 189, 248, 0.18);
-  color: #e0f2fe;
-  border: 1px solid rgba(56, 189, 248, 0.7);
-}
-
-.provider-hulu {
-  background: rgba(22, 163, 74, 0.2);
-  color: #bbf7d0;
-  border: 1px solid rgba(74, 222, 128, 0.7);
-}
-
-.provider-disney {
-  background: rgba(59, 130, 246, 0.2);
-  color: #dbeafe;
-  border: 1px solid rgba(59, 130, 246, 0.7);
-}
-
-.provider-crunchyroll {
-  background: rgba(249, 115, 22, 0.2);
-  color: #fed7aa;
-  border: 1px solid rgba(249, 115, 22, 0.7);
-}
-
-.provider-max {
-  background: rgba(147, 51, 234, 0.2);
-  color: #ede9fe;
-  border: 1px solid rgba(168, 85, 247, 0.7);
-}
-
-.provider-apple {
-  background: rgba(148, 163, 184, 0.2);
-  color: #e5e7eb;
-  border: 1px solid rgba(148, 163, 184, 0.7);
-}
-
-.provider-paramount {
-  background: rgba(37, 99, 235, 0.16);
-  color: #bfdbfe;
-  border: 1px solid rgba(59, 130, 246, 0.7);
-}
-
-.provider-peacock {
-  background: rgba(234, 179, 8, 0.14);
-  color: #fef9c3;
-  border: 1px solid rgba(234, 179, 8, 0.7);
-}
-
-.provider-youtube {
-  background: rgba(248, 113, 113, 0.18);
-  color: #fee2e2;
-  border: 1px solid rgba(248, 113, 113, 0.7);
-}
-
-/* Card actions */
-
-.card-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  align-items: flex-end;
-  justify-content: center;
-}
+/* ====================== ICON BUTTONS ============================= */
 
 .btn-icon {
   width: 26px;
@@ -384,7 +230,7 @@ select:focus {
   cursor: default;
 }
 
-/* Active states for watchlist and watched */
+/* Active states */
 
 .btn-watchlist.active {
   background: #0ea5e9;
@@ -393,18 +239,222 @@ select:focus {
 }
 
 .btn-watched.active {
-  background: #0f766e;       /* softer teal, less loud */
+  background: #0f766e;
   border-color: #0f766e;
   color: #d1faf5;
 }
 
-/* Scrollbar styling */
+/* ==========================================================
+   NEW — CTX-CARD DESIGN (MATCH SIDEPANEL)
+   ========================================================== */
 
-.results::-webkit-scrollbar {
-  width: 6px;
+.ctx-card {
+  width: 100%;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 18px;
+  padding: 18px 20px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
 }
 
-.results::-webkit-scrollbar-thumb {
-  background: #111827;
-  border-radius: 999px;
+/* Title & Meta */
+.ctx-title-centered,
+.ctx-meta-centered {
+  margin-top: -4px;
+  margin-bottom: 4px;
+  text-align: center;
+}
+
+/* Score row (IMDb + Score + buttons) */
+.ctx-score-row {
+  margin-top: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 46px; /* identical to sidepanel */
+}
+
+.ctx-score-group {
+  display: flex;
+  flex-direction: row;
+  gap: 46px;
+}
+
+.ctx-score-vertical {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Score dropdown size */
+.ctx-rating-select {
+  width: 70px;
+  max-width: 70px;
+}
+
+/* Watchlist / Watched buttons */
+.ctx-actions-inline {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+/* Providers area */
+.providers-label {
+  display: block;
+  text-align: center;
+  margin-top: 12px;
+  margin-bottom: 6px;
+  color: #cbd5e1;
+}
+
+.providers {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}
+
+/* Make Recommended tab consistent */
+#tabRecommendedPanel .ctx-card {
+  margin-top: 10px;
+}
+
+/* Prevent horizontal scrolling in popup */
+.popup {
+  overflow-x: hidden !important;
+}
+
+/* Force ctx-cards to fit within popup width */
+.ctx-card {
+  width: calc(100% - 20px) !important; /* keeps spacing, avoids overflow */
+  max-width: 380px !important;         /* fits inside 420px popup safely */
+  margin: 0 auto !important;           /* center card */
+  box-sizing: border-box;
+}
+
+/* Ensure internal elements never push width */
+.ctx-card * {
+  max-width: 100% !important;
+  box-sizing: border-box;
+}
+
+/* Shift entire inside content upward for better use of vertical space */
+.ctx-card .suggest-main {
+  margin-top: -6px;
+}
+
+/* Restore provider colors exactly like sidepanel */
+.provider-tag.provider-netflix {
+  background: rgba(220, 38, 38, 0.2);
+  color: #fecaca;
+  border: 1px solid rgba(248, 113, 113, 0.7);
+}
+
+.provider-tag.provider-prime {
+  background: rgba(56, 189, 248, 0.18);
+  color: #e0f2fe;
+  border: 1px solid rgba(56, 189, 248, 0.7);
+}
+
+.provider-tag.provider-hulu {
+  background: rgba(22, 163, 74, 0.2);
+  color: #bbf7d0;
+  border: 1px solid rgba(74, 222, 128, 0.7);
+}
+
+.provider-tag.provider-disney {
+  background: rgba(59, 130, 246, 0.2);
+  color: #dbeafe;
+  border: 1px solid rgba(59, 130, 246, 0.7);
+}
+
+.provider-tag.provider-crunchyroll {
+  background: rgba(249, 115, 22, 0.2);
+  color: #fed7aa;
+  border: 1px solid rgba(249, 115, 22, 0.7);
+}
+
+.provider-tag.provider-max {
+  background: rgba(147, 51, 234, 0.2);
+  color: #ede9fe;
+  border: 1px solid rgba(168, 85, 247, 0.7);
+}
+
+.provider-tag.provider-apple {
+  background: rgba(148, 163, 184, 0.2);
+  color: #e5e7eb;
+  border: 1px solid rgba(148, 163, 184, 0.7);
+}
+
+.provider-tag.provider-paramount {
+  background: rgba(37, 99, 235, 0.16);
+  color: #bfdbfe;
+  border: 1px solid rgba(59, 130, 246, 0.7);
+}
+
+.provider-tag.provider-peacock {
+  background: rgba(234, 179, 8, 0.14);
+  color: #fef9c3;
+  border: 1px solid rgba(234, 179, 8, 0.7);
+}
+
+.provider-tag.provider-youtube {
+  background: rgba(248, 113, 113, 0.18);
+  color: #fee2e2;
+  border: 1px solid rgba(248, 113, 113, 0.7);
+}
+
+/* Make SCORE dropdown slimmer in popup */
+.ctx-rating-select {
+  width: 48px !important;       /* was ~72px before */
+  padding: 2px 4px !important;  /* reduces height a bit */
+  font-size: 11px !important;   /* slightly smaller font for balance */
+  height: 18px !important;      /* shorter box */
+  border-radius: 6px !important; /* slightly tighter rounding */
+}
+
+/******************************
+  POPUP LOADING INDICATOR
+*******************************/
+.popup-loading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 0;
+  margin: 6px auto 10px auto;
+  justify-content: center;
+}
+
+.popup-loading.hidden {
+  display: none;
+}
+
+.popup-loading .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #38bdf8;
+  animation: popupDot 1.2s infinite ease-in-out both;
+}
+
+.popup-loading .dot:nth-child(1) {
+  animation-delay: -0.24s;
+}
+.popup-loading .dot:nth-child(2) {
+  animation-delay: -0.12s;
+}
+
+.popup-loading-text {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+@keyframes popupDot {
+  0%, 80%, 100% {
+    transform: scale(0);
+  }
+  40% {
+    transform: scale(1);
+  }
 }

@@ -1,4 +1,13 @@
-// FILE: popup.js
+// popup.js
+import {
+  pget,
+  loadList,
+  addTo,
+  removeFrom,
+  saveScore,
+  normalizeItem,
+  createItemCard,
+} from "./shared.js";
 
 // Basic constants
 const TMDB_IMG = "https://image.tmdb.org/t/p/w185";
@@ -7,7 +16,7 @@ const PROXY_URL = "http://localhost:8080";
 
 // Shared state
 const state = {
-  tab: "search", // search | watchlist | watched
+  tab: "search", // search | watchlist | watched | recommended
   type: "movie", // movie | tv
   q: "",
   genres: [],
@@ -18,6 +27,8 @@ const state = {
   watchKeys: new Set(),
   watchedKeys: new Set(),
 };
+
+let currentItems = [];
 
 // DOM refs
 const appEl = document.getElementById("app");
@@ -31,38 +42,17 @@ const elProviders = document.getElementById("providers");
 const elOnlyAvail = document.getElementById("onlyAvail");
 const elResults = document.getElementById("results");
 const elEmpty = document.getElementById("emptyState");
-const tplRow = document.getElementById("row-tpl");
 
 const btnTabSearch = document.getElementById("tabSearch");
 const btnTabWatchlist = document.getElementById("tabWatchlist");
 const btnTabWatched = document.getElementById("tabWatched");
 const btnSearch = document.getElementById("btnSearch");
 
-let currentItems = [];
-
-// ---------------------------------------------------------------------
-// Storage helpers
-// ---------------------------------------------------------------------
-
-const loadList = async (key) =>
-  (await chrome.storage.sync.get([key]))[key] || [];
-
-const saveList = async (key, arr) =>
-  chrome.storage.sync.set({ [key]: arr });
-
-const addTo = async (key, item) => {
-  const arr = await loadList(key);
-  if (!arr.find((x) => x.key === item.key)) {
-    arr.push(item);
-    await saveList(key, arr);
-  }
-};
-
-const removeFrom = async (key, tmdbKey) => {
-  const arr = await loadList(key);
-  const next = arr.filter((x) => x.key !== tmdbKey);
-  await saveList(key, next);
-};
+// Recommended tab refs
+const btnTabRecommended = document.getElementById("tabRecommended");
+const recControls = document.getElementById("recControls");
+const recPromptEl = document.getElementById("recPrompt");
+const btnRecAi = document.getElementById("btnRecAi");
 
 // Keep quick membership sets for indicators
 async function updateMembershipSets() {
@@ -72,20 +62,6 @@ async function updateMembershipSets() {
   ]);
   state.watchKeys = new Set(watchlist.map((x) => x.key));
   state.watchedKeys = new Set(watched.map((x) => x.key));
-}
-
-// ---------------------------------------------------------------------
-// Simple proxy GET
-// ---------------------------------------------------------------------
-
-async function pget(path, params = {}) {
-  const url = new URL(PROXY_URL + path);
-  Object.entries(params).forEach(([k, v]) => {
-    if (v !== undefined && v !== null) url.searchParams.set(k, v);
-  });
-  const res = await fetch(url.toString());
-  if (!res.ok) throw new Error("HTTP " + res.status);
-  return res.json();
 }
 
 // ---------------------------------------------------------------------
@@ -115,23 +91,8 @@ function renderGenreOptions() {
 }
 
 // ---------------------------------------------------------------------
-// Provider helpers
+// Provider helpers (for filtering only)
 // ---------------------------------------------------------------------
-
-function providerClass(name) {
-  const n = name.toLowerCase();
-  if (n.includes("netflix")) return "provider-netflix";
-  if (n.includes("prime") || n.includes("amazon")) return "provider-prime";
-  if (n.includes("hulu")) return "provider-hulu";
-  if (n.includes("disney")) return "provider-disney";
-  if (n.includes("crunchy")) return "provider-crunchyroll";
-  if (n.includes("hbo") || n.includes("max")) return "provider-max";
-  if (n.includes("apple")) return "provider-apple";
-  if (n.includes("paramount")) return "provider-paramount";
-  if (n.includes("peacock")) return "provider-peacock";
-  if (n.includes("youtube")) return "provider-youtube";
-  return "";
-}
 
 function providerKeyFromName(name) {
   const n = name.toLowerCase();
@@ -148,25 +109,6 @@ function providerKeyFromName(name) {
   return "other";
 }
 
-function renderProviderTags(container, providers) {
-  container.innerHTML = "";
-  if (!providers || !providers.length) {
-    const tag = document.createElement("span");
-    tag.className = "provider-tag";
-    tag.textContent = "No providers found";
-    container.appendChild(tag);
-    return;
-  }
-
-  providers.slice(0, 8).forEach((p) => {
-    const tag = document.createElement("span");
-    const cls = providerClass(p);
-    tag.className = "provider-tag " + cls;
-    tag.textContent = p;
-    container.appendChild(tag);
-  });
-}
-
 // ---------------------------------------------------------------------
 // Search via TMDB + OMDb enrichment
 // ---------------------------------------------------------------------
@@ -174,8 +116,17 @@ function renderProviderTags(container, providers) {
 async function doSearch() {
   if (state.tab !== "search") return;
 
+  const loadingEl = document.getElementById("popupLoading");
+  const resultsEl = elResults;
+
+  // START LOADING
+  loadingEl.classList.remove("hidden");
+  resultsEl.innerHTML = "";
+  elEmpty.style.display = "none";
+
   const query = (state.q || "").trim();
   if (!query) {
+    loadingEl.classList.add("hidden");
     renderResults([]);
     return;
   }
@@ -194,6 +145,7 @@ async function doSearch() {
     });
   } catch (err) {
     console.error("TMDB search failed", err);
+    loadingEl.classList.add("hidden");
     renderResults([]);
     return;
   }
@@ -270,7 +222,7 @@ async function doSearch() {
 
   let filtered = items.filter(Boolean);
 
-  // Extra filters: min IMDb and provider
+  // Extra filters
   if (state.minRating) {
     const min = parseFloat(state.minRating);
     filtered = filtered.filter((item) => {
@@ -289,8 +241,13 @@ async function doSearch() {
   }
 
   await updateMembershipSets();
+
+  // STOP LOADING
+  loadingEl.classList.add("hidden");
+
   renderResults(filtered);
 }
+
 
 // ---------------------------------------------------------------------
 // Rendering
@@ -311,136 +268,134 @@ function renderResults(items) {
 
   elEmpty.style.display = "none";
 
+  const tab = state.tab;
   const watchKeys = state.watchKeys || new Set();
   const watchedKeys = state.watchedKeys || new Set();
 
-  items.forEach((item) => {
-    const node = tplRow.content.firstElementChild.cloneNode(true);
+  items.map((it) => normalizeItem(it)).forEach((item) => {
+    const key = item.key;
 
-    const labelType = item.type === "movie" ? "Movie" : "TV";
+    const card = createItemCard(item, {
+      isInWatchlist: watchKeys.has(key),
+      isInWatched: watchedKeys.has(key),
 
-    node.querySelector(".title").textContent = item.title;
-    node.querySelector(".year-type").textContent = item.year
-      ? `${labelType} • ${item.year}`
-      : labelType;
-
-    const scoreEl = node.querySelector(".imdb-score");
-    if (item.imdbRating) {
-      scoreEl.textContent = item.imdbRating;
-    } else {
-      scoreEl.textContent = "N/A";
-    }
-
-    renderProviderTags(node.querySelector(".providers"), item.providers);
-
-    const btnWatchlist = node.querySelector(".btn-watchlist");
-    const btnWatched = node.querySelector(".btn-watched");
-    const btnRemove = node.querySelector(".btn-remove");
-
-    const inWatchlist = watchKeys.has(item.key);
-    const inWatched = watchedKeys.has(item.key);
-
-    // Reset common state
-    btnWatchlist.style.display = "inline-flex";
-    btnWatched.style.display = "inline-flex";
-    btnRemove.style.display = "inline-flex";
-
-    btnWatchlist.disabled = false;
-    btnWatched.disabled = false;
-    btnWatchlist.classList.remove("active");
-    btnWatched.classList.remove("active");
-    btnWatchlist.textContent = "☆";
-    btnWatched.textContent = "✓";
-
-    if (state.tab === "search") {
-      // Search: show both actions, hide remove
-      btnRemove.style.display = "none";
-
-      if (inWatched) {
-        // Already watched: show teal check, disable both
-        btnWatched.classList.add("active");
-        btnWatched.disabled = true;
-        btnWatched.title = "Already watched";
-
-        btnWatchlist.disabled = true;
-        btnWatchlist.title = "Already watched";
-      } else if (inWatchlist) {
-        // In watchlist only
-        btnWatchlist.classList.add("active");
-        btnWatchlist.textContent = "★";
-        btnWatchlist.title = "In watchlist";
-        btnWatched.title = "Mark as watched";
-      } else {
-        // Not in either list
-        btnWatchlist.title = "Add to watchlist";
-        btnWatched.title = "Mark as watched";
-      }
-    } else if (state.tab === "watchlist") {
-      // Watchlist tab: move to watched or remove
-      btnWatchlist.style.display = "none";
-
-      btnWatched.disabled = false;
-      btnWatched.title = "Move to watched";
-      btnRemove.title = "Remove from watchlist";
-    } else if (state.tab === "watched") {
-      // Watched tab: subtle already watched check, remove option
-      btnWatchlist.style.display = "none";
-
-      btnWatched.classList.add("active");
-      btnWatched.disabled = true;
-      btnWatched.title = "Already watched";
-      btnRemove.title = "Remove from watched";
-    }
-
-    // Click handlers
-    btnWatchlist.addEventListener("click", async (e) => {
-      e.stopPropagation();
-      if (state.tab !== "search") return;
-
-      await addTo("watchlist", item);
-      await updateMembershipSets();
-
-      btnWatchlist.classList.add("active");
-      btnWatchlist.textContent = "★";
-      btnWatchlist.title = "In watchlist";
-    });
-
-    btnWatched.addEventListener("click", async (e) => {
-      e.stopPropagation();
-
-      if (state.tab === "search") {
-        // From search: mark watched, remove from watchlist if present
-        await addTo("watched", item);
-        await removeFrom("watchlist", item.key);
+      onToggleWatchlist: async () => {
+        if (state.watchKeys.has(key)) {
+          await removeFrom("watchlist", key);
+        } else {
+          await addTo("watchlist", item);
+        }
         await updateMembershipSets();
 
-        btnWatched.classList.add("active");
-        btnWatched.disabled = true;
-        btnWatched.title = "Already watched";
+        if (tab === "search" || tab === "recommended") {
+          renderResults(currentItems);
+        } else {
+          await refreshTab();
+        }
+      },
 
-        btnWatchlist.disabled = true;
-        btnWatchlist.classList.remove("active");
-        btnWatchlist.textContent = "☆";
-      } else if (state.tab === "watchlist") {
-        // From watchlist: move to watched and refresh
-        await removeFrom("watchlist", item.key);
-        await addTo("watched", item);
+      onToggleWatched: async () => {
+        if (state.watchedKeys.has(key)) {
+          await removeFrom("watched", key);
+        } else {
+          await addTo("watched", item);
+          await removeFrom("watchlist", key);
+        }
         await updateMembershipSets();
-        await refreshTab();
-      }
-      // In watched tab the button is disabled so click will not fire
+
+        if (tab === "search" || tab === "recommended") {
+          renderResults(currentItems);
+        } else {
+          await refreshTab();
+        }
+      },
+
+      onScoreChange: async (newScore) => {
+        item.score = newScore;
+        await saveScore(key, newScore);
+        await updateMembershipSets();
+      },
     });
 
-    btnRemove.addEventListener("click", async (e) => {
-      e.stopPropagation();
-      const listKey = state.tab === "watchlist" ? "watchlist" : "watched";
-      await removeFrom(listKey, item.key);
-      await updateMembershipSets();
-      await refreshTab();
-    });
-
-    elResults.appendChild(node);
+    elResults.appendChild(card);
   });
+}
+
+// ---------------------------------------------------------------------
+// Recommended tab helpers
+// ---------------------------------------------------------------------
+
+function buildWatchedProfile(watched) {
+  // Only items with a stored score
+  const rated = watched
+    .filter((w) => w.score && w.score !== "N/A")
+    .sort((a, b) => Number(b.score || 0) - Number(a.score || 0));
+
+  if (!rated.length) return null;
+
+  const top = rated.slice(0, 6);
+  const profileLines = top.map(
+    (it) => `${it.title} (${it.year || "n/a"}) rated ${it.score}/10`
+  );
+
+  return {
+    anchor: top[0],
+    description: profileLines.join("; "),
+  };
+}
+
+async function loadRecommended() {
+  const watched = await loadList("watched");
+  await updateMembershipSets();
+
+  // Build profile from watched scores
+  const profile = buildWatchedProfile(watched);
+
+  if (!profile) {
+    elResults.innerHTML = "";
+    elEmpty.style.display = "block";
+    elEmpty.textContent =
+      "Rate a few titles in your Watched list to get recommendations here.";
+    return;
+  }
+
+  const userPrompt = recPromptEl.value.trim();
+
+  const mood = userPrompt
+    ? `User says they are in the mood for: "${userPrompt}". They previously rated: ${profile.description}. Recommend new titles they are likely to enjoy and explain each suggestion with lines like "Because you liked X and Y, you might like Z because ...".`
+    : `User has previously watched and rated: ${profile.description}. Recommend new titles they are likely to enjoy and explain each suggestion with lines like "Because you liked X and Y, you might like Z because ...".`;
+
+  try {
+    elEmpty.style.display = "block";
+    elEmpty.textContent = "Asking AI for personalized picks...";
+    elResults.innerHTML = "";
+
+    // We reuse /ai_recommend and treat the top-rated item as the anchor.
+    const anchor = profile.anchor;
+
+    const data = await pget("/ai_recommend", {
+      imdb_id: anchor.imdbId || "",
+      title: anchor.title || "",
+      year: anchor.year || "",
+      type: anchor.type || "movie",
+      mood,
+    });
+
+    const items = (data.items || data || []).map((it) => normalizeItem(it));
+
+    elEmpty.style.display = items.length ? "none" : "block";
+    if (!items.length) {
+      elEmpty.textContent =
+        "AI did not find good recommendations. Try adjusting your mood prompt.";
+    }
+
+    renderResults(items);
+  } catch (err) {
+    console.error("recommended AI error", err);
+    elResults.innerHTML = "";
+    elEmpty.style.display = "block";
+    elEmpty.textContent = "AI request for recommendations failed.";
+  }
 }
 
 // ---------------------------------------------------------------------
@@ -458,6 +413,8 @@ async function refreshTab() {
     const items = await loadList("watched");
     await updateMembershipSets();
     renderResults(items);
+  } else if (state.tab === "recommended") {
+    await loadRecommended();
   }
 }
 
@@ -467,8 +424,15 @@ function setTab(tab) {
   btnTabSearch.classList.toggle("active", tab === "search");
   btnTabWatchlist.classList.toggle("active", tab === "watchlist");
   btnTabWatched.classList.toggle("active", tab === "watched");
+  btnTabRecommended.classList.toggle("active", tab === "recommended");
 
+  // Show search controls only on Search
   elControls.style.display = tab === "search" ? "block" : "none";
+
+  // Show rec controls only on Recommended
+  if (recControls) {
+    recControls.style.display = tab === "recommended" ? "block" : "none";
+  }
 
   refreshTab();
 }
@@ -476,6 +440,15 @@ function setTab(tab) {
 btnTabSearch.addEventListener("click", () => setTab("search"));
 btnTabWatchlist.addEventListener("click", () => setTab("watchlist"));
 btnTabWatched.addEventListener("click", () => setTab("watched"));
+btnTabRecommended.addEventListener("click", () => setTab("recommended"));
+
+btnRecAi.addEventListener("click", () => {
+  if (state.tab !== "recommended") {
+    setTab("recommended");
+  } else {
+    loadRecommended();
+  }
+});
 
 btnSearch.addEventListener("click", () => {
   state.q = elQ.value;

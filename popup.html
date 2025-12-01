@@ -14,6 +14,7 @@
           <button id="tabSearch" class="tab active">Search</button>
           <button id="tabWatchlist" class="tab">Watchlist</button>
           <button id="tabWatched" class="tab">Watched</button>
+          <button id="tabRecommended">Recommended</button>
         </nav>
       </header>
 
@@ -88,57 +89,44 @@
           </div>
         </div>
       </section>
+      <section id="recControls" class="controls" style="display:none;">
+        <p class="field-label">Smart recommendations</p>
+        <p class="helper-text">
+          We will look at titles you have already watched and the scores you gave
+          them to suggest new movies or shows.
+        </p>
+
+        <div class="field">
+          <label class="field-label" for="recPrompt">
+            Not in the mood for those?
+          </label>
+          <textarea
+            id="recPrompt"
+            rows="2"
+            class="rec-textarea"
+            placeholder="Tell the AI what kind of genre or mood you are feeling (optional)"
+          ></textarea>
+        </div>
+
+        <button id="btnRecAi" class="btn primary full-width">
+          🎬 Get recommendations
+        </button>
+      </section>
 
       <section id="content" class="content">
-        <div id="results" class="results"></div>
+        <div id="popupLoading" class="popup-loading hidden">
+          <div class="dot"></div>
+          <div class="dot"></div>
+          <div class="dot"></div>
+          <span class="popup-loading-text">Searching...</span>
+        </div>
+        <div id="popupMainArea">
+          <div id="results" class="results"></div>
+        </div>
         <div id="emptyState" class="empty">
           Start by typing a title and pressing Search, or open your Watchlist.
         </div>
       </section>
-
-      <!-- Template for each result row -->
-      <template id="row-tpl">
-        <div class="result-card">
-          <div class="card-main">
-            <div class="card-header">
-              <div class="card-title-block">
-                <span class="title"></span>
-                <span class="year-type"></span>
-              </div>
-              <span class="imdb-pill">
-                <span class="imdb-label">IMDb</span>
-                <span class="imdb-score"></span>
-              </span>
-            </div>
-
-            <div class="card-providers">
-              <span class="providers-label">Available on</span>
-              <div class="providers"></div>
-            </div>
-          </div>
-
-          <div class="card-actions">
-            <button
-              class="btn-icon btn-watchlist"
-              title="Add to watchlist"
-            >
-              ☆
-            </button>
-            <button
-              class="btn-icon btn-watched"
-              title="Mark as watched"
-            >
-              ✓
-            </button>
-            <button
-              class="btn-icon btn-remove"
-              title="Remove"
-            >
-              🗑
-            </button>
-          </div>
-        </div>
-      </template>
     </div>
 
     <script src="popup.js" type="module"></script>
