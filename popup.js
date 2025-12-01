@@ -63,6 +63,10 @@ const btnPrevPage = document.getElementById("prevPage");
 const btnNextPage = document.getElementById("nextPage");
 const elPageInfo = document.getElementById("pageInfo");
 
+const popupLoading = document.getElementById("popupLoading");
+const popupMainArea = document.getElementById("popupMainArea");
+const emptyState = document.getElementById("emptyState");
+
 // Keep quick membership sets for indicators
 async function updateMembershipSets() {
   const [watchlist, watched] = await Promise.all([
@@ -110,6 +114,18 @@ function renderWaitForSearchMessage() {
     "Filters updated. Click Search when ready.";
   if (elPagination) elPagination.classList.add("hidden");
 }
+
+function showRecLoading() {
+  popupLoading.classList.remove("hidden");
+  popupMainArea.style.display = "none";
+  emptyState.style.display = "none";
+}
+
+function hideRecLoading() {
+  popupLoading.classList.add("hidden");
+  popupMainArea.style.display = "block";
+}
+
 
 function providerKeyFromName(name) {
   const n = name.toLowerCase();
@@ -336,13 +352,18 @@ function renderResults(items) {
   elResults.innerHTML = "";
 
   if (!items.length) {
-    elEmpty.style.display = "block";
-    elEmpty.textContent =
-      state.tab === "search"
-        ? "No matches yet. Try a different title or filters."
-        : "Nothing here yet.";
-    return;
-  }
+    if (state.tab !== "recommended" && emptyState.dataset.forceHidden !== "true") {
+            elEmpty.style.display = "block";
+            elEmpty.textContent =
+              state.tab === "search"
+                ? "No matches yet. Try a different title or filters."
+                : "Nothing here yet.";
+        } else {
+            elEmpty.style.display = "none";
+        }
+        return;
+    }
+
 
   elEmpty.style.display = "none";
 
@@ -434,6 +455,8 @@ function buildWatchedProfile(watched) {
 }
 
 async function loadRecommended() {
+  showRecLoading();
+
   const watched = await loadList("watched");
   await updateMembershipSets();
 
@@ -456,8 +479,10 @@ async function loadRecommended() {
     : `User has previously watched and rated: ${profile.description}. Recommend new titles they are likely to enjoy and explain each suggestion with lines like "Because you liked X and Y, you might like Z because ...".`;
 
   try {
-    elEmpty.style.display = "block";
-    elEmpty.textContent = "Asking AI for personalized picks...";
+    if (state.tab !== "recommended") {
+      elEmpty.style.display = "block";
+    }
+
     elResults.innerHTML = "";
     if (elPagination) elPagination.classList.add("hidden");
 
@@ -486,6 +511,7 @@ async function loadRecommended() {
         watchedProfile
       })
     });
+    
 
     if (!res.ok) {
       throw new Error("AI request failed with status " + res.status);
@@ -493,19 +519,26 @@ async function loadRecommended() {
 
     const data = await res.json();
 
-
-
     const items = (data.items || data || []).map((it) => normalizeItem(it));
 
-    elEmpty.style.display = items.length ? "none" : "block";
-    if (!items.length) {
-      elEmpty.textContent =
-        "AI did not find good recommendations. Try adjusting your mood prompt.";
+    hideRecLoading();
+
+    if (state.tab === "recommended") {
+        // Recommended tab should never show empty text
+        elEmpty.style.display = "none";
+    } else {
+        elEmpty.style.display = items.length ? "none" : "block";
+        if (!items.length) {
+            elEmpty.textContent =
+                "AI did not find good recommendations. Try adjusting your mood prompt.";
+        }
     }
+
 
     renderResults(items);
   } catch (err) {
     console.error("recommended AI error", err);
+    hideRecLoading();
     elResults.innerHTML = "";
     elEmpty.style.display = "block";
     elEmpty.textContent = "AI request for recommendations failed.";
@@ -544,7 +577,22 @@ function setTab(tab) {
   btnTabRecommended.classList.toggle("active", tab === "recommended");
 
   elControls.style.display = tab === "search" ? "block" : "none";
-  recControls.style.display = tab === "recommended" ? "block" : "none";
+  if (recControls) {
+      recControls.style.display = tab === "recommended" ? "block" : "none";
+
+      const emptyState = document.getElementById("emptyState");
+
+      if (tab === "recommended") {
+          emptyState.style.display = "none";
+          emptyState.dataset.forceHidden = "true";
+      } else {
+          emptyState.dataset.forceHidden = "false";
+          emptyState.style.display = "";
+      }
+  }
+
+
+
 
   if (tab === "search") {
     elResults.innerHTML = "";
