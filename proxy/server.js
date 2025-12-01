@@ -195,26 +195,50 @@ app.get("/tmdb_providers", async (req, res) => {
 ------------------------------ */
 app.post("/ai_recommend", async (req, res) => {
   try {
-    const { title, year, type, mood } = req.body;
+    const { title, year, type, mood, watchedProfile } = req.body;
+
+    // Build description from watched list
+    let watchedLines = "";
+    if (Array.isArray(watchedProfile) && watchedProfile.length > 0) {
+      watchedLines = watchedProfile
+        .map(w => `${w.title} (${w.year}) rated ${w.score}/10`)
+        .join("; ");
+    }
 
     const userMood = mood?.trim() || "";
-    const queryText = userMood
-      ? `${title} (${year}). Mood or preference: ${userMood}.`
-      : `${title} (${year})`;
 
     const prompt = `
-You are a movie expert. Suggest exactly 10 real ${
-      type === "tv" ? "TV shows" : "movies"
-    } similar to: 
-"${title}" (${year}). Consider tone, pacing, theme, genre, and audience.
+    You are a film recommendation engine.
 
-Mood or user preference: "${userMood}"
+    User's past ratings:
+    ${watchedLines || "No ratings provided"}
 
-Return ONLY a strict JSON array, with no backticks, no code fences, no explanation. Like this:
-[
-  { "title": "Example", "year": "2014", "type": "movie", "imdbId": "tt1375666" }
-]
-`;
+    Primary anchor title:
+    ${title} (${year})
+
+    User mood or preference:
+    "${userMood}"
+
+    Generate exactly 5 recommendations.
+    Each recommendation MUST include:
+    - title
+    - year
+    - type (movie or tv)
+    - imdbId
+    - reason (why they would like it based on past scores)
+
+    Return ONLY a JSON array like:
+    [
+      {
+        "title": "Example",
+        "year": "2014",
+        "type": "movie",
+        "imdbId": "tt1234567",
+        "reason": "Because you liked..."
+      }
+    ]
+    `.trim();
+
 
     const r = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",

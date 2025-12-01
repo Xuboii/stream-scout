@@ -464,13 +464,36 @@ async function loadRecommended() {
     // We reuse /ai_recommend and treat the top rated item as the anchor.
     const anchor = profile.anchor;
 
-    const data = await pget("/ai_recommend", {
-      imdb_id: anchor.imdbId || "",
-      title: anchor.title || "",
-      year: anchor.year || "",
-      type: anchor.type || "movie",
-      mood,
+    const watchedProfile = watched
+      .filter(w => w.score && w.score !== "N/A")
+      .map(w => ({
+        title: w.title,
+        year: w.year,
+        score: w.score
+      }));
+
+    const res = await fetch(`${PROXY_URL}/ai_recommend`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        imdb_id: anchor.imdbId || "",
+        title: anchor.title || "",
+        year: anchor.year || "",
+        type: anchor.type || "movie",
+        mood,
+        watchedProfile
+      })
     });
+
+    if (!res.ok) {
+      throw new Error("AI request failed with status " + res.status);
+    }
+
+    const data = await res.json();
+
+
 
     const items = (data.items || data || []).map((it) => normalizeItem(it));
 

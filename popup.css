@@ -525,3 +525,7 @@ body::-webkit-scrollbar-track {
   text-decoration: underline;
   color: #93c5fd;
 }
+
+#btnRecAi {
+  margin-top: 10px;
+}
