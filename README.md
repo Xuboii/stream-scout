@@ -21,6 +21,7 @@ Omnibox support (type ss in the Chrome address bar to search)
 Context menu integration for quick lookups
 
 Architecture Overview
+
 Chrome Extension (MV3)
   ├─ Popup UI (search, watchlist, recommendations)
   ├─ Side Panel UI (IMDb contextual view)
