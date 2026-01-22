@@ -93,10 +93,10 @@ Publishing to the Chrome Web Store was not required to demonstrate deployment, f
 
 Future Improvements
 
-Optional Chrome Web Store unlisted publication
-Rate limiting and authentication on the backend
-User configurable recommendation profiles
-Support for additional streaming regions
+Optional Chrome Web Store unlisted publication, 
+Rate limiting and authentication on the backend, 
+User configurable recommendation profiles, 
+Support for additional streaming regions, 
 Public demo video walkthrough
 
 Author
