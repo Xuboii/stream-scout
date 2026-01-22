@@ -61,7 +61,9 @@ This extension is intentionally not published to the Chrome Web Store and is mea
 
 Clone this repository
 Open Chrome and navigate to:
+
 chrome://extensions
+
 Enable Developer mode (top right)
 Click Load unpacked
 Select the root folder containing manifest.json
