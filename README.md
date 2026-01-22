@@ -3,7 +3,7 @@ Stream Scout
 Stream Scout is a Chrome extension that helps users discover movies and TV shows across streaming platforms, manage watchlists, and get AI powered recommendations based on their viewing history and preferences.
 It combines a modern Chrome extension (Manifest V3) with a deployed Node.js backend to securely integrate third party APIs and AI services.
 
-Features
+**Features**
 Search for movies and TV shows using filters like genre, streaming provider, and IMDb rating
 Automatically detect IMDb title pages and display a contextual side panel
 Add titles to Watchlist or Watched lists with personal ratings
@@ -59,7 +59,7 @@ Integrates OMDb, TMDb, and OpenAI APIs
 Installation (Local, Unpacked)
 This extension is intentionally not published to the Chrome Web Store and is meant to be installed unpacked for development and portfolio demonstration.
 
-How to Download this Extension for Use:
+**How to Download this Extension for Use:**
 
 Clone this repository
 Open Chrome and navigate to:
@@ -72,7 +72,7 @@ Select the root folder containing manifest.json
 The extension will appear in the toolbar
 The extension will function immediately using the deployed backend.
 
-Usage
+**Usage**
 
 Click the Stream Scout icon to open the popup
 Search for movies or TV shows with filters
