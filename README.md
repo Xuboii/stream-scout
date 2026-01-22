@@ -104,6 +104,4 @@ Support for additional streaming regions,
 Public demo video walkthrough
 
 Author
-Built by Eric Xu
-
-This project demonstrates full stack development across browser extensions, backend services, and cloud deployment.
+Built Eric Xu
