@@ -13,9 +13,9 @@ Generate AI powered recommendations based on watched titles and user mood
 Omnibox support (type ss in the Chrome address bar to search)
 Context menu integration for quick lookups
 
-##Architecture Overview
+## Architecture Overview
 
-Chrome Extension (Manifest V3)
+**Chrome Extension (Manifest V3)**
 - Popup UI
   - Search and filtering
   - Watchlist and Watched management
