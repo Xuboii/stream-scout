@@ -14,31 +14,27 @@ Context menu integration for quick lookups
 
 Architecture Overview
 
-Chrome Extension (Manifest V3)
-│
-├─ Popup UI
-│ ├─ Search and filters
-│ ├─ Watchlist and Watched tabs
-│ └─ AI recommendations
-│
-├─ Side Panel UI
-│ └─ Contextual IMDb title view
-│
-├─ Service Worker
-│ ├─ Omnibox integration
-│ ├─ Context menu actions
-│ └─ Tab and panel orchestration
-│
-├─ Chrome Storage (Sync)
-│ ├─ Watchlist
-│ ├─ Watched list
-│ └─ User ratings
-│
-└───► Deployed Proxy Backend (Railway)
-├─ Node.js + Express
-├─ OMDb API
-├─ TMDb API
-└─ OpenAI API
+**Chrome Extension (Manifest V3)**
+- Popup UI
+  - Search and filtering
+  - Watchlist and Watched management
+  - AI recommendations
+- Side Panel UI
+  - Contextual IMDb title detection
+- Service Worker
+  - Omnibox integration
+  - Context menu actions
+  - Side panel orchestration
+- Chrome Storage (Sync)
+  - Watchlist
+  - Watched titles
+  - User ratings
+
+**Backend Proxy (Railway)**
+- Node.js and Express
+- OMDb API integration
+- TMDb API integration
+- OpenAI API integration
 
 The extension never exposes API keys. All external API calls are routed through a hosted proxy backend.
 
