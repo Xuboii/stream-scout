@@ -103,5 +103,4 @@ User configurable recommendation profiles,
 Support for additional streaming regions, 
 Public demo video walkthrough
 
-Author
-Built Eric Xu
+Author Eric Xu
