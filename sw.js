@@ -1,5 +1,3 @@
-const PROXY = "https://proxyserver-production-6b19.up.railway.app";
-
 // Omnibox: type "ss dune"
 chrome.omnibox.setDefaultSuggestion({ description: "Search Stream Scout" });
 chrome.omnibox.onInputEntered.addListener(async (text) => {
