@@ -59,6 +59,7 @@ Integrates OMDb, TMDb, and OpenAI APIs
 Installation (Local, Unpacked)
 This extension is intentionally not published to the Chrome Web Store and is meant to be installed unpacked for development and portfolio demonstration.
 
+How to Download this Extension for Use:
 Clone this repository
 Open Chrome and navigate to:
 
