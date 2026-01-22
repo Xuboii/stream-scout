@@ -13,18 +13,32 @@ Omnibox support (type ss in the Chrome address bar to search)
 Context menu integration for quick lookups
 
 Architecture Overview
-Chrome Extension (MV3)
-  ├─ Popup UI (search, watchlist, recommendations)
-  ├─ Side Panel UI (IMDb contextual view)
-  ├─ Service Worker (background logic, omnibox, context menus)
-  └─ Chrome Storage (watchlist, watched, scores)
-          |
-          v
-Deployed Proxy Backend (Railway)
-  ├─ Node.js + Express
-  ├─ OMDb API
-  ├─ TMDb API
-  └─ OpenAI API
+
+Chrome Extension (Manifest V3)
+│
+├─ Popup UI
+│ ├─ Search and filters
+│ ├─ Watchlist and Watched tabs
+│ └─ AI recommendations
+│
+├─ Side Panel UI
+│ └─ Contextual IMDb title view
+│
+├─ Service Worker
+│ ├─ Omnibox integration
+│ ├─ Context menu actions
+│ └─ Tab and panel orchestration
+│
+├─ Chrome Storage (Sync)
+│ ├─ Watchlist
+│ ├─ Watched list
+│ └─ User ratings
+│
+└───► Deployed Proxy Backend (Railway)
+├─ Node.js + Express
+├─ OMDb API
+├─ TMDb API
+└─ OpenAI API
 
 The extension never exposes API keys. All external API calls are routed through a hosted proxy backend.
 
