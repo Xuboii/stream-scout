@@ -46,13 +46,13 @@ https://proxyserver-production-6b19.up.railway.app/health
 A successful response confirms the backend is live and operational.
 
 Tech Stack
-Frontend (Chrome Extension)
-JavaScript (ES modules)
-Chrome Extension Manifest V3
-Chrome Side Panel API with fallback injection
-Chrome Storage Sync API
-Backend
-Node.js
+Frontend (Chrome Extension), 
+JavaScript (ES modules), 
+Chrome Extension Manifest V3, 
+Chrome Side Panel API with fallback injection, 
+Chrome Storage Sync API, 
+Backend, 
+Node.js, 
 Express
 
 Hosted on Railway
