@@ -1,8 +1,5 @@
 const PROXY = "https://proxyserver-production-6b19.up.railway.app";
 
-// Log once so we can see whether sidePanel exists
-console.log("StreamScout SW loaded. chrome.sidePanel =", chrome.sidePanel);
-
 // Omnibox: type "ss dune"
 chrome.omnibox.setDefaultSuggestion({ description: "Search Stream Scout" });
 chrome.omnibox.onInputEntered.addListener(async (text) => {
