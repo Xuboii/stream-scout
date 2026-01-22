@@ -1,5 +1,6 @@
 // popup.js
 import {
+  PROXY_URL,
   pget,
   loadList,
   addTo,
@@ -12,7 +13,6 @@ import {
 // Basic constants
 const TMDB_IMG = "https://image.tmdb.org/t/p/w185";
 const COUNTRY = "US";
-const PROXY_URL = "http://localhost:8080";
 const PAGE_SIZE = 5;
 
 // Shared state

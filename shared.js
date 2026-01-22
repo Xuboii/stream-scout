@@ -1,7 +1,7 @@
 // shared.js
 
 // Proxy base URL for backend API
-export const PROXY_URL = "http://localhost:8080";
+export const PROXY_URL = "https://proxyserver-production-6b19.up.railway.app";
 
 // Simple GET helper against the proxy
 export async function pget(path, params = {}) {

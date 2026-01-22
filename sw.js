@@ -1,4 +1,4 @@
-const PROXY = "http://localhost:8080";
+const PROXY = "https://proxyserver-production-6b19.up.railway.app";
 
 // Log once so we can see whether sidePanel exists
 console.log("StreamScout SW loaded. chrome.sidePanel =", chrome.sidePanel);

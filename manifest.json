@@ -24,7 +24,7 @@
   "permissions": ["storage", "contextMenus", "notifications", "omnibox", "tabs"],
 
   "host_permissions": [
-    "http://localhost:8080/*",
+    "https://proxyserver-production-6b19.up.railway.app/*",
     "https://*.imdb.com/*",
     "https://*.tmdb.org/*",
     "https://*.netflix.com/*",
