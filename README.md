@@ -95,7 +95,7 @@ Secure third party API integration
 AI powered recommendation logic
 Publishing to the Chrome Web Store was not required to demonstrate deployment, functionality, or production readiness.
 
-Future Improvements
+**Future Improvements**
 
 Optional Chrome Web Store unlisted publication, 
 Rate limiting and authentication on the backend, 
