@@ -1,4 +1,4 @@
-Stream Scout
+**Stream Scout**
 
 Stream Scout is a Chrome extension that helps users discover movies and TV shows across streaming platforms, manage watchlists, and get AI powered recommendations based on their viewing history and preferences.
 It combines a modern Chrome extension (Manifest V3) with a deployed Node.js backend to securely integrate third party APIs and AI services.
